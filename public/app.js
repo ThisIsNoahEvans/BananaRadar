@@ -3,7 +3,6 @@ const locateBtn = document.querySelector("#locate");
 const placeInput = document.querySelector("#place");
 const statusEl = document.querySelector("#status");
 const summaryEl = document.querySelector("#summary");
-const filtersEl = document.querySelector("#filters");
 const resultsEl = document.querySelector("#results");
 const radarEl = document.querySelector(".radar");
 const bananaEl = document.querySelector(".banana");
@@ -22,7 +21,6 @@ const STATUS_COPY = {
   unknown: "Can't tell",
 };
 
-let itemFilter = "both";
 let lastResult = null;
 let watchedStores = [];
 let deferredInstall = null;
@@ -61,21 +59,12 @@ summaryEl.addEventListener("click", onShareClick);
 resultsEl.addEventListener("click", onResultsClick);
 watchListEl.addEventListener("click", onResultsClick);
 
-filtersEl.addEventListener("click", (event) => {
-  const btn = event.target.closest("[data-kind]");
-  if (!btn) return;
-  itemFilter = btn.dataset.kind;
-  syncFilterButtons();
-  if (lastResult) renderResults(lastResult);
-});
-
 async function runSearch(params) {
   bananaEl.classList.remove("happy");
   radarEl.classList.remove("found");
   document.querySelector(".celebrate")?.remove();
   showStatus("Checking live Starbucks menus… this takes a few seconds.");
   summaryEl.hidden = true;
-  filtersEl.hidden = true;
   resultsEl.hidden = true;
   locateBtn.disabled = true;
 
@@ -96,7 +85,6 @@ function render(data) {
   lastResult = data;
   const stores = data.stores || [];
   if (!stores.length) {
-    filtersEl.hidden = true;
     showStatus("No Starbucks found nearby. Try a broader place name.");
     return;
   }
@@ -123,8 +111,6 @@ function render(data) {
     </div>
   `;
 
-  filtersEl.hidden = false;
-  syncFilterButtons();
   renderResults(data);
 
   if (hits > 0) celebrate();
@@ -133,14 +119,6 @@ function render(data) {
 function renderResults(data) {
   resultsEl.hidden = false;
   resultsEl.innerHTML = (data.stores || []).map(storeCard).join("");
-}
-
-function syncFilterButtons() {
-  filtersEl.querySelectorAll("[data-kind]").forEach((btn) => {
-    const active = btn.dataset.kind === itemFilter;
-    btn.classList.toggle("is-active", active);
-    btn.setAttribute("aria-pressed", String(active));
-  });
 }
 
 function headline(hits, total) {
@@ -158,8 +136,15 @@ function storeCard(store) {
     store.market === "us"
       ? `https://www.starbucks.com/store-locator/store/${store.id}`
       : `https://www.starbucks.co.uk/store-locator/${store.storeNumber}`;
-  const drinks = store.drinks || itemsOfKind(store, "drink");
-  const food = store.food || itemsOfKind(store, "food");
+  const items = (store.items || [])
+    .map(
+      (item) => `
+        <span class="chip">
+          <span class="dot ${item.inStock ? "ok" : ""}"></span>
+          ${escapeHtml(item.name)}
+        </span>`
+    )
+    .join("");
 
   return `
     <article class="card">
@@ -175,7 +160,9 @@ function storeCard(store) {
         </div>
         <span class="badge ${store.status}">${badge}</span>
       </div>
-      ${itemGroups(drinks, food)}
+      <div class="items">
+        ${items || `<span class="chip">No banana drinks on this store’s published menu</span>`}
+      </div>
       <div class="card-links">
         <a href="${maps}" target="_blank" rel="noreferrer">Directions</a>
         <a href="${sbux}" target="_blank" rel="noreferrer">Starbucks page</a>
@@ -196,50 +183,6 @@ function storeCard(store) {
       </div>
     </article>
   `;
-}
-
-function itemsOfKind(store, kind) {
-  return (store.items || []).filter((item) => item.kind === kind);
-}
-
-function itemGroups(drinks, food) {
-  const showDrinks = itemFilter !== "food";
-  const showFood = itemFilter !== "drinks";
-
-  if (showDrinks && showFood && !drinks.length && !food.length) {
-    return `<div class="items">
-      <span class="chip">No live banana items on this store’s published menu</span>
-    </div>`;
-  }
-
-  return [
-    showDrinks &&
-      itemGroup("Drinks", drinks, "No banana drinks on this menu"),
-    showFood && itemGroup("Food", food, "No banana food on this menu"),
-  ]
-    .filter(Boolean)
-    .join("");
-}
-
-function itemGroup(label, items, emptyCopy) {
-  const chips = items.length
-    ? items.map(itemChip).join("")
-    : `<span class="chip muted">${emptyCopy}</span>`;
-
-  return `
-    <div class="item-group">
-      <h4 class="item-heading">${label}</h4>
-      <div class="items">${chips}</div>
-    </div>
-  `;
-}
-
-function itemChip(item) {
-  return `
-    <span class="chip">
-      <span class="dot ${item.inStock ? "ok" : ""}"></span>
-      ${escapeHtml(item.name)}
-    </span>`;
 }
 
 function formatKm(km) {

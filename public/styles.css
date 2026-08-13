@@ -314,40 +314,6 @@ h1 em {
   background: var(--green);
 }
 
-.filters {
-  margin-top: 16px;
-}
-
-.filter-bar {
-  display: inline-flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--paper);
-  border-radius: 999px;
-  box-shadow: var(--shadow);
-}
-
-.filter-chip {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-weight: 600;
-  font-size: 0.92rem;
-  padding: 8px 14px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.filter-chip:hover {
-  color: var(--ink);
-}
-
-.filter-chip.is-active {
-  background: var(--green);
-  color: var(--banana);
-}
-
 .results {
   display: grid;
   gap: 14px;
@@ -404,19 +370,6 @@ h1 em {
   color: #7a5b12;
 }
 
-.item-group {
-  margin-top: 14px;
-}
-
-.item-heading {
-  margin: 0 0 8px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .items {
   display: flex;
   flex-wrap: wrap;
@@ -425,10 +378,6 @@ h1 em {
 
 .card > .items {
   margin-top: 14px;
-}
-
-.chip.muted {
-  color: var(--muted);
 }
 
 .chip {
