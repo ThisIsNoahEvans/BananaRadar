@@ -164,11 +164,11 @@ footer {
 }
 
 .banana.happy {
-  animation: happy-bounce 0.78s cubic-bezier(0.34, 1.45, 0.64, 1) 2;
+  animation: happy-bounce 0.82s cubic-bezier(0.34, 1.45, 0.64, 1) 3;
 }
 
 .banana.sad {
-  animation: sad-slump 1.4s ease-in-out 1;
+  animation: sad-slump 2.5s ease-in-out 1;
   filter: drop-shadow(0 10px 16px rgba(90, 59, 18, 0.28)) grayscale(0.28) saturate(0.7);
 }
 
@@ -485,27 +485,6 @@ a.linkish:visited {
   border-radius: 1px;
 }
 
-.celebrate-toast {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: var(--green);
-  color: var(--banana);
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  box-shadow: 0 10px 24px rgba(30, 57, 50, 0.22);
-  animation: celebrate-toast 1.15s cubic-bezier(0.34, 1.4, 0.64, 1) both;
-}
-
-.celebrate-toast.is-sad {
-  background: #5a6758;
-  color: #e8eee6;
-}
-
 .celebrate-flyer.is-sad {
   animation: sad-sink var(--dur) cubic-bezier(0.33, 0.12, 0.7, 0.9) var(--delay)
     both;
@@ -516,7 +495,6 @@ a.linkish:visited {
 }
 
 .sad-cloud,
-.sad-face,
 .sad-drop {
   position: absolute;
   top: 0;
@@ -527,7 +505,7 @@ a.linkish:visited {
 .sad-cloud {
   width: 58px;
   height: 36px;
-  animation: sad-cloud-in 1.35s ease both;
+  animation: sad-cloud-in 2.5s ease both;
 }
 
 .sad-cloud-svg {
@@ -535,40 +513,6 @@ a.linkish:visited {
   width: 100%;
   height: 100%;
   filter: drop-shadow(0 6px 8px rgba(60, 72, 82, 0.22));
-}
-
-.sad-face {
-  width: 34px;
-  height: 26px;
-  animation: sad-face-in 1.4s ease both;
-}
-
-.sad-eye {
-  position: absolute;
-  top: 5px;
-  width: 5px;
-  height: 5px;
-  background: #3d2a14;
-  border-radius: 50%;
-}
-
-.sad-eye:first-child {
-  left: 6px;
-}
-
-.sad-eye:nth-child(2) {
-  right: 6px;
-}
-
-.sad-mouth {
-  position: absolute;
-  left: 8px;
-  bottom: 1px;
-  width: 16px;
-  height: 10px;
-  border: 2.5px solid #3d2a14;
-  border-color: #3d2a14 transparent transparent transparent;
-  border-radius: 50%;
 }
 
 .sad-drop {
@@ -973,14 +917,20 @@ footer {
   100% {
     transform: translateY(0) rotate(-8deg) scale(1);
   }
-  24% {
+  16% {
     transform: translateY(8px) rotate(-20deg) scale(0.95);
   }
-  48% {
+  30% {
     transform: translateY(12px) rotate(-12deg) scale(0.93);
   }
-  70% {
-    transform: translateY(9px) rotate(-22deg) scale(0.94);
+  46% {
+    transform: translateY(4px) rotate(-8deg) scale(0.97);
+  }
+  62% {
+    transform: translateY(10px) rotate(-22deg) scale(0.94);
+  }
+  78% {
+    transform: translateY(8px) rotate(-14deg) scale(0.95);
   }
 }
 
@@ -1081,27 +1031,6 @@ footer {
   }
 }
 
-@keyframes celebrate-toast {
-  0% {
-    opacity: 0;
-    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 8px) scale(0.84);
-  }
-  20% {
-    opacity: 1;
-    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 0) scale(1.06);
-  }
-  32% {
-    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 0) scale(1);
-  }
-  78% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -8px) scale(0.96);
-  }
-}
-
 @keyframes sad-sink {
   0% {
     opacity: 0;
@@ -1134,41 +1063,19 @@ footer {
     opacity: 0;
     transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 10px) scale(0.7);
   }
-  18% {
+  10% {
     opacity: 1;
     transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -4px) scale(1.06);
   }
-  32% {
+  18% {
     transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 0) scale(1);
   }
-  78% {
+  82% {
     opacity: 1;
   }
   100% {
     opacity: 0;
     transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 8px) scale(0.94);
-  }
-}
-
-@keyframes sad-face-in {
-  0%,
-  8% {
-    opacity: 0;
-    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -50%) scale(0.7);
-  }
-  22% {
-    opacity: 1;
-    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -50%) scale(1.08);
-  }
-  34% {
-    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -50%) scale(1);
-  }
-  78% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -40%) scale(0.94);
   }
 }
 
@@ -1276,9 +1183,7 @@ footer {
   .progress-bar.is-indeterminate,
   .celebrate-piece,
   .celebrate-flyer,
-  .celebrate-toast,
   .sad-cloud,
-  .sad-face,
   .sad-drop {
     animation: none;
   }

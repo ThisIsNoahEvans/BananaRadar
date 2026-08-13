@@ -876,11 +876,9 @@ function flashLabel(button, label) {
   );
 }
 
-const CELEBRATE_TOASTS = ["Gone bananas!", "Yellow alert!", "That's bananas."];
-const SAD_TOASTS = ["It's a sad banana day.", "Not a peel in sight.", "Un-appeeling.", "We wept."];
 const CONFETTI_KINDS = ["dot", "chip", "ribbon"];
 const CONFETTI_COLORS = ["#f6c343", "#e09412", "#00754a", "#1e3932", "#fff6df", "#ffe08a"];
-const CELEBRATE_MS = 1500;
+const CELEBRATE_MS = 2800;
 
 function resetBananaMood() {
   bananaEl.classList.remove("happy", "sad");
@@ -941,7 +939,6 @@ function burstBananas() {
   addFlyers(layer);
   addConfetti(layer, cx, cy);
   addNiblets(layer, cx, cy);
-  addToast(layer, origin);
 
   document.body.appendChild(layer);
   window.setTimeout(() => layer.remove(), CELEBRATE_MS);
@@ -952,10 +949,8 @@ function burstSadBananas() {
   const origin = bananaEl.getBoundingClientRect();
 
   addSadCloud(layer, origin);
-  addSadFace(layer, origin);
   addRain(layer, origin);
   addSadFlyers(layer);
-  addToast(layer, origin, { phrases: SAD_TOASTS, tone: "is-sad" });
 
   document.body.appendChild(layer);
   window.setTimeout(() => layer.remove(), CELEBRATE_MS);
@@ -963,11 +958,15 @@ function burstSadBananas() {
 
 function addFlyers(layer) {
   const specs = [
-    { dir: "from-left", y: 9, drift: 5, spin: 320, size: 50, dur: 1120, delay: 0 },
-    { dir: "from-right", y: 24, drift: -6, spin: -280, size: 36, dur: 1040, delay: 60 },
-    { dir: "from-left", y: 46, drift: 8, spin: 240, size: 44, dur: 1180, delay: 30 },
-    { dir: "from-right", y: 63, drift: -5, spin: -360, size: 32, dur: 980, delay: 90 },
-    { dir: "from-left", y: 81, drift: 4, spin: 200, size: 40, dur: 1100, delay: 20 },
+    { dir: "from-left", y: 8, drift: 5, spin: 320, size: 52, dur: 1680, delay: 0 },
+    { dir: "from-right", y: 22, drift: -6, spin: -280, size: 38, dur: 1540, delay: 80 },
+    { dir: "from-left", y: 42, drift: 8, spin: 240, size: 46, dur: 1760, delay: 40 },
+    { dir: "from-right", y: 62, drift: -5, spin: -360, size: 34, dur: 1480, delay: 120 },
+    { dir: "from-left", y: 80, drift: 4, spin: 200, size: 42, dur: 1620, delay: 30 },
+    { dir: "from-right", y: 14, drift: 7, spin: 280, size: 40, dur: 1600, delay: 920 },
+    { dir: "from-left", y: 36, drift: -4, spin: -220, size: 48, dur: 1720, delay: 1000 },
+    { dir: "from-right", y: 58, drift: 6, spin: 300, size: 36, dur: 1560, delay: 1080 },
+    { dir: "from-left", y: 76, drift: -5, spin: -260, size: 44, dur: 1680, delay: 980 },
   ];
 
   for (const spec of specs) {
@@ -987,41 +986,74 @@ function addFlyers(layer) {
 }
 
 function addConfetti(layer, cx, cy) {
-  for (let i = 0; i < 22; i++) {
-    const piece = document.createElement("span");
-    piece.className = `celebrate-piece confetti-${CONFETTI_KINDS[i % 3]}`;
-    piece.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
-
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 60 + Math.random() * 150;
-    piece.style.setProperty("--x", `${cx}px`);
-    piece.style.setProperty("--y", `${cy}px`);
-    piece.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
-    piece.style.setProperty("--up", `${-(30 + Math.random() * 80)}px`);
-    piece.style.setProperty("--dy", `${90 + Math.random() * 150}px`);
-    piece.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 540}deg`);
-    piece.style.setProperty("--delay", `${Math.random() * 70}ms`);
-    piece.style.setProperty("--dur", `${820 + Math.random() * 380}ms`);
-    layer.appendChild(piece);
+  for (let i = 0; i < 26; i++) {
+    spawnConfetti(layer, {
+      kind: CONFETTI_KINDS[i % 3],
+      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      x: cx,
+      y: cy,
+      dx: Math.cos(Math.random() * Math.PI * 2) * (70 + Math.random() * 160),
+      up: -(40 + Math.random() * 90),
+      dy: 110 + Math.random() * 180,
+      rot: (Math.random() * 2 - 1) * 540,
+      delay: Math.random() * 80,
+      dur: 1200 + Math.random() * 500,
+    });
   }
 
-  for (let i = 0; i < 8; i++) {
-    const piece = document.createElement("span");
-    piece.className = `celebrate-piece confetti-${CONFETTI_KINDS[i % 3]} fall`;
-    piece.style.background = CONFETTI_COLORS[(i + 3) % CONFETTI_COLORS.length];
-    piece.style.setProperty("--x", `${Math.random() * window.innerWidth}px`);
-    piece.style.setProperty("--y", "-16px");
-    piece.style.setProperty("--dx", `${(Math.random() * 2 - 1) * 40}px`);
-    piece.style.setProperty("--dy", `${120 + Math.random() * 200}px`);
-    piece.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 420}deg`);
-    piece.style.setProperty("--delay", `${40 + Math.random() * 160}ms`);
-    piece.style.setProperty("--dur", `${900 + Math.random() * 350}ms`);
-    layer.appendChild(piece);
+  for (let i = 0; i < 14; i++) {
+    spawnConfetti(layer, {
+      kind: CONFETTI_KINDS[i % 3],
+      color: CONFETTI_COLORS[(i + 3) % CONFETTI_COLORS.length],
+      x: Math.random() * window.innerWidth,
+      y: -16,
+      dx: (Math.random() * 2 - 1) * 50,
+      dy: 180 + Math.random() * 240,
+      rot: (Math.random() * 2 - 1) * 420,
+      delay: 180 + Math.random() * 1100,
+      dur: 1500 + Math.random() * 700,
+      fall: true,
+    });
+  }
+
+  for (let i = 0; i < 12; i++) {
+    spawnConfetti(layer, {
+      kind: CONFETTI_KINDS[i % 3],
+      color: CONFETTI_COLORS[(i + 1) % CONFETTI_COLORS.length],
+      x: cx,
+      y: cy,
+      dx: Math.cos(Math.random() * Math.PI * 2) * (50 + Math.random() * 140),
+      up: -(30 + Math.random() * 70),
+      dy: 100 + Math.random() * 160,
+      rot: (Math.random() * 2 - 1) * 480,
+      delay: 980 + Math.random() * 140,
+      dur: 1100 + Math.random() * 500,
+    });
   }
 }
 
+function spawnConfetti(layer, spec) {
+  const piece = document.createElement("span");
+  piece.className = `celebrate-piece confetti-${spec.kind}${spec.fall ? " fall" : ""}`;
+  piece.style.background = spec.color;
+  piece.style.setProperty("--x", `${spec.x}px`);
+  piece.style.setProperty("--y", `${spec.y}px`);
+  piece.style.setProperty("--dx", `${spec.dx}px`);
+  if (spec.up != null) piece.style.setProperty("--up", `${spec.up}px`);
+  piece.style.setProperty("--dy", `${spec.dy}px`);
+  piece.style.setProperty("--rot", `${spec.rot}deg`);
+  piece.style.setProperty("--delay", `${spec.delay}ms`);
+  piece.style.setProperty("--dur", `${spec.dur}ms`);
+  layer.appendChild(piece);
+}
+
 function addNiblets(layer, cx, cy) {
-  for (let i = 0; i < 5; i++) {
+  addNibletWave(layer, cx, cy, 6, 0);
+  addNibletWave(layer, cx, cy, 4, 980);
+}
+
+function addNibletWave(layer, cx, cy, count, delay) {
+  for (let i = 0; i < count; i++) {
     const el = document.createElement("div");
     el.className = "celebrate-piece celebrate-niblet";
     const svg = bananaClone();
@@ -1029,28 +1061,19 @@ function addNiblets(layer, cx, cy) {
     el.appendChild(svg);
 
     const size = 20 + Math.random() * 10;
-    const angle = -Math.PI / 2 + (i - 2) * 0.58 + (Math.random() * 0.18 - 0.09);
-    const dist = 90 + Math.random() * 80;
+    const angle = -Math.PI / 2 + (i - (count - 1) / 2) * 0.55 + (Math.random() * 0.18 - 0.09);
+    const dist = 100 + Math.random() * 90;
     el.style.setProperty("--size", `${size}px`);
     el.style.setProperty("--x", `${cx - size / 2}px`);
     el.style.setProperty("--y", `${cy - size / 2}px`);
     el.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
-    el.style.setProperty("--up", `${-(45 + Math.random() * 35)}px`);
-    el.style.setProperty("--dy", `${70 + Math.random() * 90}px`);
+    el.style.setProperty("--up", `${-(50 + Math.random() * 40)}px`);
+    el.style.setProperty("--dy", `${90 + Math.random() * 110}px`);
     el.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 420}deg`);
-    el.style.setProperty("--delay", `${i * 28}ms`);
-    el.style.setProperty("--dur", `${860 + Math.random() * 260}ms`);
+    el.style.setProperty("--delay", `${delay + i * 32}ms`);
+    el.style.setProperty("--dur", `${1100 + Math.random() * 320}ms`);
     layer.appendChild(el);
   }
-}
-
-function addToast(layer, origin, { phrases = CELEBRATE_TOASTS, tone = "" } = {}) {
-  const toast = document.createElement("div");
-  toast.className = `celebrate-toast${tone ? ` ${tone}` : ""}`;
-  toast.textContent = phrases[Math.floor(Math.random() * phrases.length)];
-  toast.style.setProperty("--tx", `${origin.left + origin.width / 2}px`);
-  toast.style.setProperty("--ty", `${origin.bottom + 10}px`);
-  layer.appendChild(toast);
 }
 
 function addSadCloud(layer, origin) {
@@ -1066,36 +1089,29 @@ function addSadCloud(layer, origin) {
   layer.appendChild(cloud);
 }
 
-function addSadFace(layer, origin) {
-  const face = document.createElement("div");
-  face.className = "sad-face";
-  face.innerHTML = `<span class="sad-eye"></span><span class="sad-eye"></span><span class="sad-mouth"></span>`;
-  face.style.setProperty("--tx", `${origin.left + origin.width / 2 + 4}px`);
-  face.style.setProperty("--ty", `${origin.top + origin.height * 0.42}px`);
-  layer.appendChild(face);
-}
-
 function addRain(layer, origin) {
   const cx = origin.left + origin.width / 2;
   const cy = origin.top + 4;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 16; i++) {
     const drop = document.createElement("span");
     drop.className = "sad-drop";
-    drop.style.setProperty("--x", `${cx + (i - 3.5) * 9 + (Math.random() * 6 - 3)}px`);
+    drop.style.setProperty("--x", `${cx + (i % 8 - 3.5) * 9 + (Math.random() * 8 - 4)}px`);
     drop.style.setProperty("--y", `${cy}px`);
-    drop.style.setProperty("--dx", `${(Math.random() * 2 - 1) * 10}px`);
-    drop.style.setProperty("--dy", `${64 + Math.random() * 56}px`);
-    drop.style.setProperty("--delay", `${40 + i * 70}ms`);
-    drop.style.setProperty("--dur", `${680 + Math.random() * 220}ms`);
+    drop.style.setProperty("--dx", `${(Math.random() * 2 - 1) * 12}px`);
+    drop.style.setProperty("--dy", `${80 + Math.random() * 90}px`);
+    drop.style.setProperty("--delay", `${60 + i * 90}ms`);
+    drop.style.setProperty("--dur", `${900 + Math.random() * 280}ms`);
     layer.appendChild(drop);
   }
 }
 
 function addSadFlyers(layer) {
   const specs = [
-    { x: 18, y: 16, drift: -10, spin: -48, size: 44, dur: 1280, delay: 40 },
-    { x: 68, y: 22, drift: 12, spin: 36, size: 34, dur: 1180, delay: 90 },
-    { x: 44, y: 8, drift: 4, spin: -22, size: 38, dur: 1340, delay: 0 },
+    { x: 16, y: 12, drift: -10, spin: -48, size: 44, dur: 2100, delay: 0 },
+    { x: 64, y: 18, drift: 12, spin: 36, size: 34, dur: 1960, delay: 140 },
+    { x: 40, y: 6, drift: 4, spin: -22, size: 38, dur: 2200, delay: 40 },
+    { x: 26, y: 10, drift: -8, spin: 30, size: 40, dur: 2000, delay: 960 },
+    { x: 72, y: 20, drift: 10, spin: -40, size: 32, dur: 1880, delay: 1080 },
   ];
 
   for (const spec of specs) {
