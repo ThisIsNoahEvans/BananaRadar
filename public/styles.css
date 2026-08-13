@@ -167,8 +167,7 @@ footer {
 }
 
 .banana.is-flipping {
-  animation: banana-flip var(--flip-dur, 0.75s) cubic-bezier(0.2, 0.78, 0.22, 1)
-    both;
+  animation: banana-flip var(--flip-dur, 0.7s) linear both;
 }
 
 .radar.found .ping {
@@ -187,8 +186,7 @@ footer {
 
 .banana.happy.is-flipping,
 .banana.sad.is-flipping {
-  animation: banana-flip var(--flip-dur, 0.75s) cubic-bezier(0.2, 0.78, 0.22, 1)
-    both;
+  animation: banana-flip var(--flip-dur, 0.7s) linear both;
 }
 
 .banana.sad {
@@ -954,14 +952,11 @@ footer {
 }
 
 @keyframes banana-flip {
-  0% {
-    transform: rotate(calc(-8deg)) scale(1);
+  from {
+    transform: rotate(-8deg);
   }
-  55% {
-    transform: rotate(calc(-8deg + var(--flip-dir) * 198deg)) scale(1.08);
-  }
-  100% {
-    transform: rotate(calc(-8deg + var(--flip-dir) * 360deg)) scale(1);
+  to {
+    transform: rotate(calc(-8deg + var(--flip-dir) * 360deg));
   }
 }
 

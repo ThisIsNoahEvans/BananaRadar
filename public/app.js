@@ -1427,7 +1427,7 @@ function flipHomeBanana() {
 
   const dir = Math.random() < 0.5 ? 1 : -1;
   bananaEl.style.setProperty("--flip-dir", String(dir));
-  bananaEl.style.setProperty("--flip-dur", `${620 + Math.random() * 280}ms`);
+  bananaEl.style.setProperty("--flip-dur", `${560 + Math.random() * 200}ms`);
   bananaEl.classList.remove("is-flipping");
   void bananaEl.offsetWidth;
   bananaEl.classList.add("is-flipping");
