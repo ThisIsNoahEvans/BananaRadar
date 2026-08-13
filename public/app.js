@@ -180,8 +180,8 @@ async function runSearch(params, { skipIntro = false, updateUrl = true } = {}) {
   const { signal } = abortController;
   const seq = ++searchSeq;
 
-  bananaEl.classList.remove("happy");
-  radarEl.classList.remove("found");
+  bananaEl.classList.remove("happy", "sad");
+  radarEl.classList.remove("found", "miss");
   document.querySelector(".celebrate")?.remove();
   setSearching(true);
   if (updateUrl) syncSearchUrl(params.q);
@@ -455,6 +455,7 @@ function render(data, { doCelebrate = true } = {}) {
   }
 
   if (doCelebrate && hits > 0) celebrate();
+  else if (doCelebrate) lament();
 }
 
 function hideListUi() {
@@ -866,15 +867,20 @@ function flashLabel(button, label) {
 }
 
 const CELEBRATE_TOASTS = ["Gone bananas!", "Yellow alert!", "That's bananas."];
+const SAD_TOASTS = ["It's a sad banana day.", "Not a peel in sight.", "Un-appeeling.", "We wept."];
 const CONFETTI_KINDS = ["dot", "chip", "ribbon"];
 const CONFETTI_COLORS = ["#f6c343", "#e09412", "#00754a", "#1e3932", "#fff6df", "#ffe08a"];
 const CELEBRATE_MS = 1500;
 
+function resetBananaMood() {
+  bananaEl.classList.remove("happy", "sad");
+  radarEl.classList.remove("found", "miss");
+}
+
 function celebrate() {
   if (reducedMotion.matches) return;
 
-  bananaEl.classList.remove("happy");
-  radarEl.classList.remove("found");
+  resetBananaMood();
   void bananaEl.offsetWidth;
   bananaEl.classList.add("happy");
   radarEl.classList.add("found");
@@ -882,10 +888,21 @@ function celebrate() {
   burstBananas();
 
   window.clearTimeout(celebrateTimer);
-  celebrateTimer = window.setTimeout(() => {
-    bananaEl.classList.remove("happy");
-    radarEl.classList.remove("found");
-  }, CELEBRATE_MS);
+  celebrateTimer = window.setTimeout(resetBananaMood, CELEBRATE_MS);
+}
+
+function lament() {
+  if (reducedMotion.matches) return;
+
+  resetBananaMood();
+  void bananaEl.offsetWidth;
+  bananaEl.classList.add("sad");
+  radarEl.classList.add("miss");
+
+  burstSadBananas();
+
+  window.clearTimeout(celebrateTimer);
+  celebrateTimer = window.setTimeout(resetBananaMood, CELEBRATE_MS);
 }
 
 function bananaClone() {
@@ -897,13 +914,16 @@ function bananaClone() {
   return svg;
 }
 
-function burstBananas() {
+function fxLayer() {
   document.querySelector(".celebrate")?.remove();
-
   const layer = document.createElement("div");
   layer.className = "celebrate";
   layer.setAttribute("aria-hidden", "true");
+  return layer;
+}
 
+function burstBananas() {
+  const layer = fxLayer();
   const origin = bananaEl.getBoundingClientRect();
   const cx = origin.left + origin.width / 2;
   const cy = origin.top + origin.height / 2;
@@ -912,6 +932,20 @@ function burstBananas() {
   addConfetti(layer, cx, cy);
   addNiblets(layer, cx, cy);
   addToast(layer, origin);
+
+  document.body.appendChild(layer);
+  window.setTimeout(() => layer.remove(), CELEBRATE_MS);
+}
+
+function burstSadBananas() {
+  const layer = fxLayer();
+  const origin = bananaEl.getBoundingClientRect();
+
+  addSadCloud(layer, origin);
+  addSadFace(layer, origin);
+  addRain(layer, origin);
+  addSadFlyers(layer);
+  addToast(layer, origin, { phrases: SAD_TOASTS, tone: "is-sad" });
 
   document.body.appendChild(layer);
   window.setTimeout(() => layer.remove(), CELEBRATE_MS);
@@ -1000,13 +1034,75 @@ function addNiblets(layer, cx, cy) {
   }
 }
 
-function addToast(layer, origin) {
+function addToast(layer, origin, { phrases = CELEBRATE_TOASTS, tone = "" } = {}) {
   const toast = document.createElement("div");
-  toast.className = "celebrate-toast";
-  toast.textContent = CELEBRATE_TOASTS[Math.floor(Math.random() * CELEBRATE_TOASTS.length)];
+  toast.className = `celebrate-toast${tone ? ` ${tone}` : ""}`;
+  toast.textContent = phrases[Math.floor(Math.random() * phrases.length)];
   toast.style.setProperty("--tx", `${origin.left + origin.width / 2}px`);
   toast.style.setProperty("--ty", `${origin.bottom + 10}px`);
   layer.appendChild(toast);
+}
+
+function addSadCloud(layer, origin) {
+  const cloud = document.createElement("div");
+  cloud.className = "sad-cloud";
+  cloud.style.setProperty("--tx", `${origin.left + origin.width / 2}px`);
+  cloud.style.setProperty("--ty", `${origin.top - 6}px`);
+  cloud.innerHTML = `<svg class="sad-cloud-svg" viewBox="0 0 64 36" aria-hidden="true">
+      <ellipse cx="22" cy="22" rx="14" ry="10" fill="#9aa7b2"/>
+      <ellipse cx="36" cy="18" rx="16" ry="12" fill="#c5ced6"/>
+      <ellipse cx="48" cy="23" rx="11" ry="9" fill="#a8b3be"/>
+    </svg>`;
+  layer.appendChild(cloud);
+}
+
+function addSadFace(layer, origin) {
+  const face = document.createElement("div");
+  face.className = "sad-face";
+  face.innerHTML = `<span class="sad-eye"></span><span class="sad-eye"></span><span class="sad-mouth"></span>`;
+  face.style.setProperty("--tx", `${origin.left + origin.width / 2 + 4}px`);
+  face.style.setProperty("--ty", `${origin.top + origin.height * 0.42}px`);
+  layer.appendChild(face);
+}
+
+function addRain(layer, origin) {
+  const cx = origin.left + origin.width / 2;
+  const cy = origin.top + 4;
+  for (let i = 0; i < 8; i++) {
+    const drop = document.createElement("span");
+    drop.className = "sad-drop";
+    drop.style.setProperty("--x", `${cx + (i - 3.5) * 9 + (Math.random() * 6 - 3)}px`);
+    drop.style.setProperty("--y", `${cy}px`);
+    drop.style.setProperty("--dx", `${(Math.random() * 2 - 1) * 10}px`);
+    drop.style.setProperty("--dy", `${64 + Math.random() * 56}px`);
+    drop.style.setProperty("--delay", `${40 + i * 70}ms`);
+    drop.style.setProperty("--dur", `${680 + Math.random() * 220}ms`);
+    layer.appendChild(drop);
+  }
+}
+
+function addSadFlyers(layer) {
+  const specs = [
+    { x: 18, y: 16, drift: -10, spin: -48, size: 44, dur: 1280, delay: 40 },
+    { x: 68, y: 22, drift: 12, spin: 36, size: 34, dur: 1180, delay: 90 },
+    { x: 44, y: 8, drift: 4, spin: -22, size: 38, dur: 1340, delay: 0 },
+  ];
+
+  for (const spec of specs) {
+    const flyer = document.createElement("div");
+    flyer.className = "celebrate-flyer is-sad";
+    flyer.style.setProperty("--x", `${spec.x}vw`);
+    flyer.style.setProperty("--y", `${spec.y}vh`);
+    flyer.style.setProperty("--drift", `${spec.drift}vw`);
+    flyer.style.setProperty("--spin", `${spec.spin}deg`);
+    flyer.style.setProperty("--size", `${spec.size}px`);
+    flyer.style.setProperty("--dur", `${spec.dur}ms`);
+    flyer.style.setProperty("--delay", `${spec.delay}ms`);
+    const svg = bananaClone();
+    svg.className = "celebrate-flyer-svg";
+    flyer.appendChild(svg);
+    layer.appendChild(flyer);
+  }
 }
 
 function showStatus(message, { loading = false } = {}) {

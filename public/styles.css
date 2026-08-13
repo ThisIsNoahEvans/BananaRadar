@@ -158,8 +158,18 @@ footer {
   animation-duration: 1.05s;
 }
 
+.radar.miss .ping {
+  border-color: rgba(122, 138, 150, 0.45);
+  animation-duration: 2.2s;
+}
+
 .banana.happy {
   animation: happy-bounce 0.78s cubic-bezier(0.34, 1.45, 0.64, 1) 2;
+}
+
+.banana.sad {
+  animation: sad-slump 1.4s ease-in-out 1;
+  filter: drop-shadow(0 10px 16px rgba(90, 59, 18, 0.28)) grayscale(0.28) saturate(0.7);
 }
 
 h1 {
@@ -489,6 +499,84 @@ a.linkish:visited {
   white-space: nowrap;
   box-shadow: 0 10px 24px rgba(30, 57, 50, 0.22);
   animation: celebrate-toast 1.15s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.celebrate-toast.is-sad {
+  background: #5a6758;
+  color: #e8eee6;
+}
+
+.celebrate-flyer.is-sad {
+  animation: sad-sink var(--dur) cubic-bezier(0.33, 0.12, 0.7, 0.9) var(--delay)
+    both;
+}
+
+.celebrate-flyer.is-sad .celebrate-flyer-svg {
+  filter: grayscale(0.4) saturate(0.5) drop-shadow(0 8px 10px rgba(90, 59, 18, 0.22));
+}
+
+.sad-cloud,
+.sad-face,
+.sad-drop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.sad-cloud {
+  width: 58px;
+  height: 36px;
+  animation: sad-cloud-in 1.35s ease both;
+}
+
+.sad-cloud-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 6px 8px rgba(60, 72, 82, 0.22));
+}
+
+.sad-face {
+  width: 34px;
+  height: 26px;
+  animation: sad-face-in 1.4s ease both;
+}
+
+.sad-eye {
+  position: absolute;
+  top: 5px;
+  width: 5px;
+  height: 5px;
+  background: #3d2a14;
+  border-radius: 50%;
+}
+
+.sad-eye:first-child {
+  left: 6px;
+}
+
+.sad-eye:nth-child(2) {
+  right: 6px;
+}
+
+.sad-mouth {
+  position: absolute;
+  left: 8px;
+  bottom: 1px;
+  width: 16px;
+  height: 10px;
+  border: 2.5px solid #3d2a14;
+  border-color: #3d2a14 transparent transparent transparent;
+  border-radius: 50%;
+}
+
+.sad-drop {
+  width: 7px;
+  height: 11px;
+  background: #8eb4d4;
+  border-radius: 50% 50% 50% 50% / 28% 28% 72% 72%;
+  animation: sad-drip var(--dur) ease-in var(--delay) both;
 }
 
 .toolbar {
@@ -880,6 +968,22 @@ footer {
   }
 }
 
+@keyframes sad-slump {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-8deg) scale(1);
+  }
+  24% {
+    transform: translateY(8px) rotate(-20deg) scale(0.95);
+  }
+  48% {
+    transform: translateY(12px) rotate(-12deg) scale(0.93);
+  }
+  70% {
+    transform: translateY(9px) rotate(-22deg) scale(0.94);
+  }
+}
+
 @keyframes summary-pop {
   from {
     transform: scale(0.97);
@@ -998,6 +1102,95 @@ footer {
   }
 }
 
+@keyframes sad-sink {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--x), var(--y), 0) rotate(-16deg) scale(0.88);
+  }
+  14% {
+    opacity: 0.95;
+  }
+  42% {
+    transform: translate3d(
+        calc(var(--x) + var(--drift) * 0.4),
+        calc(var(--y) + 16vh),
+        0
+      )
+      rotate(8deg) scale(0.92);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(
+        calc(var(--x) + var(--drift)),
+        calc(var(--y) + 56vh),
+        0
+      )
+      rotate(var(--spin)) scale(0.8);
+  }
+}
+
+@keyframes sad-cloud-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 10px) scale(0.7);
+  }
+  18% {
+    opacity: 1;
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -4px) scale(1.06);
+  }
+  32% {
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 0) scale(1);
+  }
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 8px) scale(0.94);
+  }
+}
+
+@keyframes sad-face-in {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -50%) scale(0.7);
+  }
+  22% {
+    opacity: 1;
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -50%) scale(1.08);
+  }
+  34% {
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -50%) scale(1);
+  }
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -40%) scale(0.94);
+  }
+}
+
+@keyframes sad-drip {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--x), var(--y), 0) scale(0.55);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(
+        calc(var(--x) + var(--dx)),
+        calc(var(--y) + var(--dy)),
+        0
+      )
+      scale(0.85);
+  }
+}
+
 @keyframes shimmer {
   from {
     background-position: 100% 0;
@@ -1083,7 +1276,10 @@ footer {
   .progress-bar.is-indeterminate,
   .celebrate-piece,
   .celebrate-flyer,
-  .celebrate-toast {
+  .celebrate-toast,
+  .sad-cloud,
+  .sad-face,
+  .sad-drop {
     animation: none;
   }
 
