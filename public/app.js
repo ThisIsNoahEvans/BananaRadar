@@ -104,16 +104,17 @@ function render(data) {
   const label = data.origin?.label ? ` near ${data.origin.label}` : "";
   const checkedAt = formatCheckedAt(data.checkedAt);
   const nearestHit = stores.find((store) => store.flavourInStock);
+  const emptyJoke = hits === 0 ? nextEmptyHeadline() : "";
   const shareText = nearestHit
     ? shareLine(nearestHit)
-    : `It's a sad banana day${label} — none of the ${stores.length} nearby stores have the banana flavour.`;
+    : `${emptyJoke.replace(/\.$/, "")}${label} — none of the ${stores.length} nearby stores have the banana flavour.`;
   statusEl.hidden = true;
 
   summaryEl.hidden = false;
   summaryEl.innerHTML = `
     <div class="summary-card${hits ? " hit" : ""}">
       <div>
-        <h2>${headline(hits, stores.length)}</h2>
+        <h2>${escapeHtml(headline(hits, stores.length, emptyJoke))}</h2>
         <p>${hits} of ${stores.length} nearby stores have the banana flavour on the menu${label}.</p>
         ${checkedAt ? `<p class="checked-at">${escapeHtml(checkedAt)}</p>` : ""}
         <button type="button" class="btn ghost share-btn" data-share-text="${escapeHtml(shareText)}">
@@ -145,10 +146,93 @@ function syncFilterButtons() {
   });
 }
 
-function headline(hits, total) {
-  if (hits === 0) return "It's a sad banana day.";
+const EMPTY_HEADLINES = [
+  "It's a sad banana day.",
+  "Nobody's gone bananas today.",
+  "The bunch has left the building.",
+  "Not a peel in sight.",
+  "The flavour slipped away.",
+  "Un-appeeling news, I'm afraid.",
+  "A bunch of nothing.",
+  "Banana left the chat.",
+  "This neighbourhood is banana-free.",
+  "Your local has not gone bananas.",
+  "Zero bunches. Zero joy.",
+  "It's a banana drought.",
+  "Gone. Split. Vanished.",
+  "Quiet on the yellow front.",
+  "Today the banana clocked out.",
+  "Bananas? In this economy?",
+  "The bunch called in sick.",
+  "A fruitless search, sadly.",
+  "The flavour did a runner.",
+  "This is a banana-less timeline.",
+  "We've hit a banana-shaped hole.",
+  "The tropics closed early.",
+  "Banana went to a different postcode.",
+  "The flavour is in another castle.",
+  "Empty bunch energy.",
+  "We checked. We wept. No banana.",
+  "Forecast: grey, with no bananas.",
+  "The yellow brick road is closed.",
+  "Banana's on a break. A long one.",
+  "Nothing yellow. Nothing to sip.",
+  "Yellow alert: flavour's fled.",
+  "Banana? We hardly knew ye.",
+  "Potassium? More like no-tassium.",
+  "Out of stock, out of luck, out of bananas.",
+  "No banana, no glory.",
+  "The menu's gone plain.",
+  "All peel, no deal.",
+  "Yellow's been cancelled.",
+  "The great banana vanishing.",
+  "Sold out faster than a holiday cup.",
+  "Split's over. Flavour's gone.",
+  "The bunch is in another store.",
+  "Banana went brown and then went home.",
+  "Seeking banana. Found only oat milk.",
+  "Regular coffee only. Tragic.",
+  "The caramelised banana caramelised off.",
+  "No yellow in the radar return.",
+  "Starbucks, but make it banana-less.",
+  "The last banana left before you did.",
+  "So close, and yet so un-banana.",
+];
+
+const EMPTY_JOKE_KEY = "banana-empty-jokes";
+
+function headline(hits, total, emptyJoke) {
+  if (hits === 0) return emptyJoke || nextEmptyHeadline();
   if (hits === total) return "The flavour is everywhere.";
   return "Banana spotted nearby.";
+}
+
+function nextEmptyHeadline() {
+  let queue = [];
+  try {
+    queue = JSON.parse(sessionStorage.getItem(EMPTY_JOKE_KEY) || "[]");
+  } catch {
+    queue = [];
+  }
+  if (!Array.isArray(queue) || queue.length === 0) {
+    queue = shuffle(EMPTY_HEADLINES.map((_, i) => i));
+  }
+  const index = queue.pop();
+  try {
+    sessionStorage.setItem(EMPTY_JOKE_KEY, JSON.stringify(queue));
+  } catch {
+    // Private mode can block sessionStorage; still return a joke.
+  }
+  return EMPTY_HEADLINES[index] || EMPTY_HEADLINES[0];
+}
+
+function shuffle(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 function storeCard(store) {
