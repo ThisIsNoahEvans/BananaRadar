@@ -189,6 +189,10 @@ h1 em {
   text-underline-offset: 3px;
 }
 
+a.linkish:visited {
+  color: var(--green-2);
+}
+
 .status,
 .summary {
   margin-top: 28px;

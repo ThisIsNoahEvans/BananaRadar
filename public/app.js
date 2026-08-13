@@ -35,17 +35,36 @@ locateBtn.addEventListener("click", async () => {
 });
 
 document.querySelectorAll("[data-place]").forEach((btn) => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", (event) => {
+    event.preventDefault();
     placeInput.value = btn.dataset.place;
     form.requestSubmit();
   });
 });
 
-async function runSearch(params) {
+window.addEventListener("popstate", () => {
+  const q = queryFromUrl();
+  if (q) {
+    placeInput.value = q;
+    runSearch({ q }, { updateUrl: false });
+    return;
+  }
+  placeInput.value = "";
+  clearResults();
+});
+
+const initialQ = queryFromUrl();
+if (initialQ) {
+  placeInput.value = initialQ;
+  runSearch({ q: initialQ }, { updateUrl: false });
+}
+
+async function runSearch(params, { updateUrl = true } = {}) {
   showStatus("Checking live Starbucks menus… this takes a few seconds.");
   summaryEl.hidden = true;
   resultsEl.hidden = true;
   locateBtn.disabled = true;
+  if (updateUrl) syncSearchUrl(params.q);
 
   try {
     const query = new URLSearchParams(params);
@@ -58,6 +77,28 @@ async function runSearch(params) {
   } finally {
     locateBtn.disabled = false;
   }
+}
+
+function queryFromUrl() {
+  return new URLSearchParams(location.search).get("q")?.trim() || "";
+}
+
+function syncSearchUrl(q) {
+  const next = q
+    ? `${location.pathname}?${new URLSearchParams({ q })}`
+    : location.pathname;
+  const current = `${location.pathname}${location.search}`;
+  if (current === next) return;
+  history.pushState(q ? { q } : {}, "", next);
+}
+
+function clearResults() {
+  statusEl.hidden = true;
+  statusEl.textContent = "";
+  summaryEl.hidden = true;
+  summaryEl.innerHTML = "";
+  resultsEl.hidden = true;
+  resultsEl.innerHTML = "";
 }
 
 function render(data) {
