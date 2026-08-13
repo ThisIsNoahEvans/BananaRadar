@@ -8,7 +8,7 @@
       name="description"
       content="Check live Starbucks menus to see if the Banana flavour is in stock near you."
     />
-    <link rel="canonical" href="https://banana-radar.web.app/" />
+    <link rel="canonical" href="https://banana.itsnoahevans.co.uk/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Banana Radar" />
     <meta property="og:title" content="Banana Radar — is the flavour in stock?" />
@@ -16,8 +16,8 @@
       property="og:description"
       content="Check live Starbucks menus to see if the Banana flavour is in stock near you."
     />
-    <meta property="og:url" content="https://banana-radar.web.app/" />
-    <meta property="og:image" content="https://banana-radar.web.app/og.png" />
+    <meta property="og:url" content="https://banana.itsnoahevans.co.uk/" />
+    <meta property="og:image" content="https://banana.itsnoahevans.co.uk/og.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -28,7 +28,7 @@
       name="twitter:description"
       content="Check live Starbucks menus to see if the Banana flavour is in stock near you."
     />
-    <meta name="twitter:image" content="https://banana-radar.web.app/og.png" />
+    <meta name="twitter:image" content="https://banana.itsnoahevans.co.uk/og.png" />
     <meta name="theme-color" content="#1e3932" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -58,7 +58,6 @@
           Install app
         </button>
         <div class="top-meta">
-          <p class="eyebrow">Unofficial · live store menus</p>
           <div class="unit-toggle" role="group" aria-label="Distance unit">
             <button type="button" data-unit="km" aria-pressed="true">km</button>
             <button type="button" data-unit="mi" aria-pressed="false">mi</button>
@@ -73,36 +72,35 @@
           <span class="ping"></span>
           <span class="ping delay"></span>
           <svg class="banana" viewBox="0 0 200 200" role="img" aria-label="Banana">
-            <g transform="translate(-10 -2)">
+            <g transform="translate(-2 4)">
               <path
-                d="M52 145C58 80 125 38 168 78"
-                fill="none"
-                stroke="#f6c343"
-                stroke-width="44"
-                stroke-linecap="round"
+                d="M 136 50 L 148 30 L 158 36 L 144 55 Z"
+                fill="#5a3b12"
+                stroke="#5a3b12"
+                stroke-width="3"
+                stroke-linejoin="round"
               />
               <path
-                d="M64 135C72 86 122 52 156 80"
+                d="M 50 140 C 130 180 180 130 140 50 C 120 90 90 120 50 140 Z"
+                fill="#f6c343"
+                stroke="#f6c343"
+                stroke-width="16"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M 65 130 C 110 150 150 110 130 65"
                 fill="none"
                 stroke="#e2a51a"
                 stroke-width="5"
                 stroke-linecap="round"
               />
-              <path
-                d="M160 60 176 44"
-                fill="none"
-                stroke="#5a3b12"
-                stroke-width="11"
-                stroke-linecap="round"
-              />
+              <circle cx="48" cy="142" r="5" fill="#3d2a14" />
             </g>
           </svg>
         </div>
         <h1>Has your local gone <em>bananas</em>?</h1>
         <p class="lede">
-          Starbucks doesn’t publish a stock API, so this reads the same live
-          mobile-order menus their website uses — store by store — for the
-          Caramelised Banana flavour.
+          Check if your local Starbucks has the Banana flavour in stock.
         </p>
 
         <div class="search-wrap">
@@ -112,7 +110,7 @@
               id="place"
               name="q"
               type="search"
-              placeholder="Postcode or neighbourhood"
+              placeholder="Postcode or place"
               autocomplete="off"
             />
             <button type="submit" id="search-btn" class="btn secondary">Search</button>
@@ -124,7 +122,6 @@
             <span></span>
           </div>
         </div>
-        <p class="hint">Try a UK postcode like <a class="linkish" href="/?q=WC2N+6NN" data-place="WC2N 6NN">WC2N 6NN</a> or a city. The address bar updates so you can share the link.</p>
       </section>
 
       <section id="status" class="status" hidden aria-live="polite"></section>
@@ -134,7 +131,7 @@
           <h3>Watching</h3>
           <p id="watch-hint">
             We'll ping this phone when banana flavour comes back at a store you
-            watch. No account.
+            watch.
           </p>
           <p id="watch-status" class="alert-status" hidden></p>
           <ul id="watch-list" class="watch-list"></ul>
@@ -153,8 +150,7 @@
 
     <footer>
       <p>
-        Stock comes from public Starbucks store menus. Licensed kiosks often
-        don’t publish live inventory. Not affiliated with Starbucks.
+        Stock comes from public Starbucks store menus. Not affiliated with Starbucks.
       </p>
     </footer>
     <script src="/app.js"></script>
