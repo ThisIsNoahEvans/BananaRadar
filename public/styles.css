@@ -409,6 +409,33 @@ a.linkish:visited {
   overflow: hidden;
 }
 
+.celebrate-flyer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--size);
+  height: var(--size);
+  will-change: transform, opacity;
+}
+
+.celebrate-flyer.from-left {
+  animation: celebrate-fly-right var(--dur) cubic-bezier(0.22, 0.68, 0.32, 1)
+    var(--delay) both;
+}
+
+.celebrate-flyer.from-right {
+  animation: celebrate-fly-left var(--dur) cubic-bezier(0.22, 0.68, 0.32, 1)
+    var(--delay) both;
+}
+
+.celebrate-flyer-svg,
+.celebrate-niblet-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 8px 10px rgba(224, 148, 18, 0.32));
+}
+
 .celebrate-piece {
   position: absolute;
   top: 0;
@@ -416,37 +443,52 @@ a.linkish:visited {
   display: grid;
   place-items: center;
   transform: translate3d(var(--x), var(--y), 0);
-  animation: celebrate-pop var(--dur) cubic-bezier(0.2, 0.75, 0.25, 1) var(--delay)
-    forwards;
+  animation: celebrate-burst var(--dur) cubic-bezier(0.2, 0.72, 0.28, 1) var(--delay)
+    both;
   will-change: transform, opacity;
 }
 
-.celebrate-piece.emoji {
-  font-size: var(--size);
-  line-height: 1;
+.celebrate-piece.fall {
+  animation-name: celebrate-fall;
+}
+
+.celebrate-niblet {
+  width: var(--size, 24px);
+  height: var(--size, 24px);
 }
 
 .celebrate-piece.confetti-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--green-2);
 }
 
 .celebrate-piece.confetti-chip {
   width: 11px;
   height: 7px;
   border-radius: 2px;
-  background: var(--banana);
-  box-shadow: 0 0 0 1px rgba(224, 148, 18, 0.25);
 }
 
-.celebrate-piece.confetti-dot:nth-child(3n) {
-  background: var(--banana-deep);
+.celebrate-piece.confetti-ribbon {
+  width: 5px;
+  height: 14px;
+  border-radius: 1px;
 }
 
-.celebrate-piece.confetti-chip:nth-child(4n) {
+.celebrate-toast {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
   background: var(--green);
+  color: var(--banana);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(30, 57, 50, 0.22);
+  animation: celebrate-toast 1.15s cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
 
 .toolbar {
@@ -847,10 +889,35 @@ footer {
   }
 }
 
-@keyframes celebrate-pop {
+@keyframes celebrate-burst {
   0% {
     opacity: 0;
-    transform: translate3d(var(--x), var(--y), 0) scale(0.6) rotate(0deg);
+    transform: translate3d(var(--x), var(--y), 0) scale(0.45) rotate(0deg);
+  }
+  16% {
+    opacity: 1;
+    transform: translate3d(
+        calc(var(--x) + var(--dx) * 0.55),
+        calc(var(--y) + var(--up)),
+        0
+      )
+      scale(1) rotate(calc(var(--rot) * 0.4));
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(
+        calc(var(--x) + var(--dx)),
+        calc(var(--y) + var(--dy)),
+        0
+      )
+      scale(0.88) rotate(var(--rot));
+  }
+}
+
+@keyframes celebrate-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--x), var(--y), 0) rotate(0deg) scale(0.7);
   }
   12% {
     opacity: 1;
@@ -862,7 +929,72 @@ footer {
         calc(var(--y) + var(--dy)),
         0
       )
-      scale(1) rotate(var(--rot));
+      rotate(var(--rot)) scale(1);
+  }
+}
+
+@keyframes celebrate-fly-right {
+  0% {
+    opacity: 0;
+    transform: translate3d(-18vw, var(--y), 0) rotate(-28deg) scale(0.82);
+  }
+  10% {
+    opacity: 1;
+  }
+  52% {
+    transform: translate3d(48vw, calc(var(--y) + var(--drift)), 0) rotate(14deg)
+      scale(1);
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(112vw, calc(var(--y) + var(--drift) * -0.35), 0)
+      rotate(var(--spin)) scale(0.92);
+  }
+}
+
+@keyframes celebrate-fly-left {
+  0% {
+    opacity: 0;
+    transform: translate3d(112vw, var(--y), 0) rotate(28deg) scale(0.82);
+  }
+  10% {
+    opacity: 1;
+  }
+  52% {
+    transform: translate3d(48vw, calc(var(--y) + var(--drift)), 0) rotate(-12deg)
+      scale(1);
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-18vw, calc(var(--y) + var(--drift) * -0.35), 0)
+      rotate(var(--spin)) scale(0.92);
+  }
+}
+
+@keyframes celebrate-toast {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 8px) scale(0.84);
+  }
+  20% {
+    opacity: 1;
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 0) scale(1.06);
+  }
+  32% {
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, 0) scale(1);
+  }
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--tx), var(--ty), 0) translate(-50%, -8px) scale(0.96);
   }
 }
 
@@ -948,7 +1080,10 @@ footer {
   .status-spinner,
   .badge-spinner,
   .search-progress span,
-  .progress-bar.is-indeterminate {
+  .progress-bar.is-indeterminate,
+  .celebrate-piece,
+  .celebrate-flyer,
+  .celebrate-toast {
     animation: none;
   }
 
