@@ -25,30 +25,30 @@
     <circle r="224" stroke-width="2" stroke-opacity="0.16"/>
   </g>
 
-  <g transform="translate(86, 204) scale(1.15)" filter="url(#bananaShadow)">
+  <g transform="translate(95, 200) scale(1.15)" filter="url(#bananaShadow)">
     <g transform="translate(-2 4)">
       <path
-        d="M 136 50 L 148 30 L 158 36 L 144 55 Z"
+        d="M 132 46 L 148 25 L 158 32 L 142 53 Z"
         fill="#5a3b12"
         stroke="#5a3b12"
-        stroke-width="3"
+        stroke-width="2"
         stroke-linejoin="round"
       />
       <path
         d="M 50 140 C 130 180 180 130 140 50 C 120 90 90 120 50 140 Z"
         fill="#f6c343"
         stroke="#f6c343"
-        stroke-width="16"
+        stroke-width="6"
         stroke-linejoin="round"
       />
       <path
-        d="M 65 130 C 110 150 150 110 130 65"
+        d="M 62 133 C 110 155 155 110 133 62"
         fill="none"
         stroke="#e2a51a"
-        stroke-width="5"
+        stroke-width="4"
         stroke-linecap="round"
       />
-      <circle cx="48" cy="142" r="5" fill="#3d2a14" />
+      <circle cx="48" cy="142" r="3" fill="#3d2a14" />
     </g>
   </g>
 
