@@ -4,14 +4,19 @@
   "private": true,
   "type": "module",
   "description": "Live checker for Banana flavour stock at nearby Starbucks stores.",
+  "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "emulators": "npx -y firebase-tools@latest emulators:start --only functions,hosting",
+    "deploy": "npx -y firebase-tools@latest deploy --only functions,hosting"
   },
   "engines": {
-    "node": ">=18"
+    "node": "22"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "firebase-admin": "^13.5.0",
+    "firebase-functions": "^6.4.0"
   }
 }
