@@ -417,17 +417,9 @@ a.linkish:visited {
   left: 0;
   width: var(--size);
   height: var(--size);
+  animation: celebrate-fly var(--dur) cubic-bezier(0.22, 0.62, 0.28, 1)
+    var(--delay) both;
   will-change: transform, opacity;
-}
-
-.celebrate-flyer.from-left {
-  animation: celebrate-fly-right var(--dur) cubic-bezier(0.22, 0.68, 0.32, 1)
-    var(--delay) both;
-}
-
-.celebrate-flyer.from-right {
-  animation: celebrate-fly-left var(--dur) cubic-bezier(0.22, 0.68, 0.32, 1)
-    var(--delay) both;
 }
 
 .celebrate-flyer-svg,
@@ -979,47 +971,41 @@ footer {
   }
 }
 
-@keyframes celebrate-fly-right {
+@keyframes celebrate-fly {
   0% {
     opacity: 0;
-    transform: translate3d(-18vw, var(--y), 0) rotate(-28deg) scale(0.82);
+    transform: translate3d(var(--x), var(--y), 0) rotate(-24deg) scale(0.78);
   }
-  10% {
+  12% {
     opacity: 1;
   }
-  52% {
-    transform: translate3d(48vw, calc(var(--y) + var(--drift)), 0) rotate(14deg)
-      scale(1);
+  38% {
+    transform: translate3d(
+        calc(var(--x) + var(--dx) * 0.35 + var(--sway)),
+        calc(var(--y) + var(--dy) * 0.32),
+        0
+      )
+      rotate(calc(var(--spin) * 0.35)) scale(1.06);
   }
-  88% {
+  68% {
+    transform: translate3d(
+        calc(var(--x) + var(--dx) * 0.72 - var(--sway)),
+        calc(var(--y) + var(--dy) * 0.68),
+        0
+      )
+      rotate(calc(var(--spin) * 0.72)) scale(1);
+  }
+  86% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate3d(112vw, calc(var(--y) + var(--drift) * -0.35), 0)
-      rotate(var(--spin)) scale(0.92);
-  }
-}
-
-@keyframes celebrate-fly-left {
-  0% {
-    opacity: 0;
-    transform: translate3d(112vw, var(--y), 0) rotate(28deg) scale(0.82);
-  }
-  10% {
-    opacity: 1;
-  }
-  52% {
-    transform: translate3d(48vw, calc(var(--y) + var(--drift)), 0) rotate(-12deg)
-      scale(1);
-  }
-  88% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(-18vw, calc(var(--y) + var(--drift) * -0.35), 0)
-      rotate(var(--spin)) scale(0.92);
+    transform: translate3d(
+        calc(var(--x) + var(--dx)),
+        calc(var(--y) + var(--dy)),
+        0
+      )
+      rotate(var(--spin)) scale(0.9);
   }
 }
 

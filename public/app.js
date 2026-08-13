@@ -952,28 +952,60 @@ function burstSadBananas() {
   window.setTimeout(() => layer.remove(), CELEBRATE_MS);
 }
 
-function addFlyers(layer) {
-  const specs = [
-    { dir: "from-left", y: 8, drift: 5, spin: 320, size: 52, dur: 1680, delay: 0 },
-    { dir: "from-right", y: 22, drift: -6, spin: -280, size: 38, dur: 1540, delay: 80 },
-    { dir: "from-left", y: 42, drift: 8, spin: 240, size: 46, dur: 1760, delay: 40 },
-    { dir: "from-right", y: 62, drift: -5, spin: -360, size: 34, dur: 1480, delay: 120 },
-    { dir: "from-left", y: 80, drift: 4, spin: 200, size: 42, dur: 1620, delay: 30 },
-    { dir: "from-right", y: 14, drift: 7, spin: 280, size: 40, dur: 1600, delay: 920 },
-    { dir: "from-left", y: 36, drift: -4, spin: -220, size: 48, dur: 1720, delay: 1000 },
-    { dir: "from-right", y: 58, drift: 6, spin: 300, size: 36, dur: 1560, delay: 1080 },
-    { dir: "from-left", y: 76, drift: -5, spin: -260, size: 44, dur: 1680, delay: 980 },
-  ];
+function flyerPath(edge) {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
 
-  for (const spec of specs) {
+  if (edge === 0) {
+    return {
+      x: Math.random() * w,
+      y: -48,
+      dx: (Math.random() * 2 - 1) * w * 0.55,
+      dy: h * (0.5 + Math.random() * 0.65),
+    };
+  }
+  if (edge === 1) {
+    return {
+      x: -48,
+      y: Math.random() * h * 0.85,
+      dx: w * (0.5 + Math.random() * 0.6),
+      dy: (Math.random() * 2 - 1) * h * 0.55,
+    };
+  }
+  if (edge === 2) {
+    return {
+      x: w + 48,
+      y: Math.random() * h * 0.85,
+      dx: -w * (0.5 + Math.random() * 0.6),
+      dy: (Math.random() * 2 - 1) * h * 0.55,
+    };
+  }
+  return {
+    x: Math.random() * w,
+    y: Math.random() * h * 0.28,
+    dx: (Math.random() * 2 - 1) * w * 0.7,
+    dy: h * (0.35 + Math.random() * 0.55),
+  };
+}
+
+function addFlyers(layer) {
+  const count = 12;
+  for (let i = 0; i < count; i++) {
+    const path = flyerPath(i % 4);
     const flyer = document.createElement("div");
-    flyer.className = `celebrate-flyer ${spec.dir}`;
-    flyer.style.setProperty("--y", `${spec.y + (Math.random() * 5 - 2.5)}vh`);
-    flyer.style.setProperty("--drift", `${spec.drift}vh`);
-    flyer.style.setProperty("--spin", `${spec.spin}deg`);
-    flyer.style.setProperty("--size", `${spec.size}px`);
-    flyer.style.setProperty("--dur", `${spec.dur}ms`);
-    flyer.style.setProperty("--delay", `${spec.delay}ms`);
+    flyer.className = "celebrate-flyer";
+    flyer.style.setProperty("--x", `${path.x}px`);
+    flyer.style.setProperty("--y", `${path.y}px`);
+    flyer.style.setProperty("--dx", `${path.dx}px`);
+    flyer.style.setProperty("--dy", `${path.dy}px`);
+    flyer.style.setProperty("--sway", `${(Math.random() * 2 - 1) * 120}px`);
+    flyer.style.setProperty("--spin", `${(Math.random() * 2 - 1) * 420}deg`);
+    flyer.style.setProperty("--size", `${76 + Math.random() * 44}px`);
+    flyer.style.setProperty("--dur", `${1600 + Math.random() * 700}ms`);
+    flyer.style.setProperty(
+      "--delay",
+      `${i < 7 ? Math.random() * 140 : 920 + Math.random() * 180}ms`
+    );
     const svg = bananaClone();
     svg.className = "celebrate-flyer-svg";
     flyer.appendChild(svg);
