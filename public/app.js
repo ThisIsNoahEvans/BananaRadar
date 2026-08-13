@@ -1,8 +1,13 @@
+const OPEN_ONLY_KEY = "banana-radar:open-only";
+
 const form = document.querySelector("#search-form");
 const locateBtn = document.querySelector("#locate");
 const placeInput = document.querySelector("#place");
 const statusEl = document.querySelector("#status");
 const summaryEl = document.querySelector("#summary");
+const toolbarEl = document.querySelector("#toolbar");
+const openOnlyEl = document.querySelector("#open-only");
+const filterNoteEl = document.querySelector("#filter-note");
 const resultsEl = document.querySelector("#results");
 
 const STATUS_COPY = {
@@ -10,6 +15,18 @@ const STATUS_COPY = {
   sold_out: "Sold out",
   unknown: "Can't tell",
 };
+
+let lastResult = null;
+
+openOnlyEl.checked = readOpenOnly();
+openOnlyEl.addEventListener("change", () => {
+  try {
+    localStorage.setItem(OPEN_ONLY_KEY, String(openOnlyEl.checked));
+  } catch {
+    /* private mode / blocked storage */
+  }
+  if (lastResult) render(lastResult);
+});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -44,6 +61,7 @@ document.querySelectorAll("[data-place]").forEach((btn) => {
 async function runSearch(params) {
   showStatus("Checking live Starbucks menus… this takes a few seconds.");
   summaryEl.hidden = true;
+  toolbarEl.hidden = true;
   resultsEl.hidden = true;
   locateBtn.disabled = true;
 
@@ -61,13 +79,23 @@ async function runSearch(params) {
 }
 
 function render(data) {
+  lastResult = data;
   const stores = data.stores || [];
   if (!stores.length) {
+    toolbarEl.hidden = true;
     showStatus("No Starbucks found nearby. Try a broader place name.");
     return;
   }
 
-  const hits = data.summary?.flavourInStock || 0;
+  const ranked = sortInStockFirst(stores);
+  const visible = openOnlyEl.checked
+    ? ranked.filter((store) => store.isOpen)
+    : ranked;
+  const hiddenClosed = stores.length - visible.length;
+  const hits = visible.filter((store) => store.flavourInStock).length;
+  const closedHits = stores.filter(
+    (store) => store.flavourInStock && !store.isOpen
+  ).length;
   const label = data.origin?.label ? ` near ${data.origin.label}` : "";
   statusEl.hidden = true;
 
@@ -75,21 +103,66 @@ function render(data) {
   summaryEl.innerHTML = `
     <div class="summary-card">
       <div>
-        <h2>${headline(hits, stores.length)}</h2>
-        <p>${hits} of ${stores.length} nearby stores have the banana flavour on the menu${label}.</p>
+        <h2>${headline(hits, visible.length, {
+          closedHits,
+          noneVisible: visible.length === 0,
+        })}</h2>
+        <p>${summaryCopy(hits, visible.length, stores.length, label, openOnlyEl.checked)}</p>
       </div>
-      <div class="score">${hits}/${stores.length}</div>
+      <div class="score">${visible.length ? `${hits}/${visible.length}` : "0"}</div>
     </div>
   `;
 
+  toolbarEl.hidden = false;
+  filterNoteEl.textContent =
+    openOnlyEl.checked && hiddenClosed
+      ? `${hiddenClosed} closed ${hiddenClosed === 1 ? "store" : "stores"} hidden`
+      : "";
+
   resultsEl.hidden = false;
-  resultsEl.innerHTML = stores.map(storeCard).join("");
+  resultsEl.innerHTML = visible.length
+    ? visible.map(storeCard).join("")
+    : `<p class="empty">All nearby stores are closed. Turn off Open only to see them.</p>`;
 }
 
-function headline(hits, total) {
+function headline(hits, total, { closedHits = 0, noneVisible = false } = {}) {
+  if (noneVisible) return "Everyone's closed.";
+  if (hits === 0 && closedHits > 0) {
+    return "Banana's on — but those stores are closed.";
+  }
   if (hits === 0) return "It's a sad banana day.";
-  if (hits === total) return "The flavour is everywhere.";
+  if (total > 0 && hits === total) return "The flavour is everywhere.";
   return "Banana spotted nearby.";
+}
+
+function summaryCopy(hits, visibleCount, total, label, openOnly) {
+  if (openOnly && visibleCount === 0) {
+    return `None of the ${total} nearby stores are open${label}.`;
+  }
+  if (openOnly) {
+    return `${hits} of ${visibleCount} open stores have the banana flavour on the menu${label}.`;
+  }
+  return `${hits} of ${total} nearby stores have the banana flavour on the menu${label}.`;
+}
+
+function sortInStockFirst(stores) {
+  return [...stores].sort((a, b) => {
+    if (Boolean(a.flavourInStock) !== Boolean(b.flavourInStock)) {
+      return a.flavourInStock ? -1 : 1;
+    }
+    return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+  });
+}
+
+function readOpenOnly() {
+  try {
+    const saved = localStorage.getItem(OPEN_ONLY_KEY);
+    if (saved === "false") return false;
+    if (saved === "true") return true;
+  } catch {
+    /* ignore */
+  }
+  return true;
 }
 
 function storeCard(store) {

@@ -229,6 +229,47 @@ h1 em {
   white-space: nowrap;
 }
 
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 14px;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--paper);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  user-select: none;
+}
+
+.check input {
+  accent-color: var(--green-2);
+  width: 1rem;
+  height: 1rem;
+}
+
+.filter-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.empty {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-weight: 600;
+  text-align: center;
+}
+
 .results {
   display: grid;
   gap: 14px;
