@@ -411,51 +411,28 @@ h1 em {
 }
 
 .card-links a,
-.share-link,
-.watch-link {
+.share-link {
   color: var(--green-2);
   font: inherit;
   font-weight: 600;
   text-decoration: none;
 }
 
-.share-link,
-.watch-link {
+.share-link {
   border: 0;
   background: none;
   padding: 0;
   cursor: pointer;
 }
 
-.watch-link.is-watching {
-  color: var(--ok);
-}
 
 .card-links a:hover,
-.share-link:hover,
-.watch-link:hover {
+.share-link:hover {
   text-decoration: underline;
 }
 
-.watches,
 .alerts {
   margin-top: 18px;
-}
-
-.watch-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.watch-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  font-weight: 600;
 }
 
 .alert-card {

@@ -108,16 +108,31 @@
 
       <section id="status" class="status" hidden></section>
       <section id="summary" class="summary" hidden></section>
-      <section id="watches" class="watches" hidden>
-        <div class="alert-card">
-          <h3>Watching</h3>
-          <p id="watch-hint">
-            We'll ping this phone when banana flavour comes back at a store you
-            watch. No account.
+      <section id="alerts" class="alerts" hidden>
+        <form id="alert-form" class="alert-card">
+          <h3>Ping me when it's back</h3>
+          <p>
+            No account. We'll email you if banana flavour shows up near this
+            search.
           </p>
-          <p id="watch-status" class="alert-status" hidden></p>
-          <ul id="watch-list" class="watch-list"></ul>
-        </div>
+          <div class="alert-row">
+            <label class="sr-only" for="alert-email">Email</label>
+            <input
+              id="alert-email"
+              name="email"
+              type="email"
+              required
+              placeholder="you@email.com"
+              autocomplete="email"
+            />
+            <button type="submit" class="btn primary">Notify me</button>
+          </div>
+          <label class="push-opt">
+            <input id="alert-push" type="checkbox" />
+            Also notify this device
+          </label>
+          <p id="alert-status" class="alert-status" hidden></p>
+        </form>
       </section>
       <section id="results" class="results" hidden></section>
     </main>
