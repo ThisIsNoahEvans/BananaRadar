@@ -1,9 +1,11 @@
+import "./lib/load-env.js";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createApiApp } from "./api.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const port = Number(process.env.PORT) || 3000;
 
 const app = createApiApp();

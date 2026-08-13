@@ -7,3 +7,5 @@ node_modules/
 firebase-debug.log
 firebase-debug.*.log
 ui-debug.log
+.secrets/
+.firestore-rules-analysis.md

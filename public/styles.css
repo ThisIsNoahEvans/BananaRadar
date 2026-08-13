@@ -72,6 +72,12 @@ footer {
   box-shadow: inset 0 0 0 3px var(--banana);
 }
 
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .eyebrow {
   margin: 0;
   color: var(--muted);
@@ -177,6 +183,11 @@ h1 em {
 .btn.secondary {
   background: #efe4c4;
   color: var(--green);
+}
+
+.btn.compact {
+  padding: 8px 12px;
+  font-size: 0.85rem;
 }
 
 .btn.ghost {
@@ -451,27 +462,51 @@ h1 em {
 }
 
 .card-links a,
-.share-link {
+.share-link,
+.watch-link {
   color: var(--green-2);
   font: inherit;
   font-weight: 600;
   text-decoration: none;
 }
 
-.share-link {
+.share-link,
+.watch-link {
   border: 0;
   background: none;
   padding: 0;
   cursor: pointer;
 }
 
+.watch-link.is-watching {
+  color: var(--ok);
+}
+
 .card-links a:hover,
-.share-link:hover {
+.share-link:hover,
+.watch-link:hover {
   text-decoration: underline;
 }
 
+.watches,
 .alerts {
   margin-top: 18px;
+}
+
+.watch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.watch-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  font-weight: 600;
 }
 
 .alert-card {
@@ -621,5 +656,11 @@ footer {
 
   .alert-row {
     grid-template-columns: 1fr;
+  }
+
+  .top-actions {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
   }
 }

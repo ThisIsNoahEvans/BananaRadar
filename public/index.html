@@ -29,10 +29,15 @@
       content="Check live Starbucks menus to see if the Banana flavour is in stock near you."
     />
     <meta name="twitter:image" content="https://banana-radar.web.app/og.png" />
+    <meta name="theme-color" content="#1e3932" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Banana Radar" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
-    <link rel="icon" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -48,7 +53,12 @@
         <span class="siren" aria-hidden="true"></span>
         Banana Radar
       </div>
-      <p class="eyebrow">Unofficial · live store menus</p>
+      <div class="top-actions">
+        <button type="button" id="install" class="btn ghost compact" hidden>
+          Install app
+        </button>
+        <p class="eyebrow">Unofficial · live store menus</p>
+      </div>
     </header>
 
     <main>
@@ -98,31 +108,16 @@
 
       <section id="status" class="status" hidden></section>
       <section id="summary" class="summary" hidden></section>
-      <section id="alerts" class="alerts" hidden>
-        <form id="alert-form" class="alert-card">
-          <h3>Ping me when it's back</h3>
-          <p>
-            No account. We'll email you if banana flavour shows up near this
-            search.
+      <section id="watches" class="watches" hidden>
+        <div class="alert-card">
+          <h3>Watching</h3>
+          <p id="watch-hint">
+            We'll ping this phone when banana flavour comes back at a store you
+            watch. No account.
           </p>
-          <div class="alert-row">
-            <label class="sr-only" for="alert-email">Email</label>
-            <input
-              id="alert-email"
-              name="email"
-              type="email"
-              required
-              placeholder="you@email.com"
-              autocomplete="email"
-            />
-            <button type="submit" class="btn primary">Notify me</button>
-          </div>
-          <label class="push-opt">
-            <input id="alert-push" type="checkbox" />
-            Also notify this device
-          </label>
-          <p id="alert-status" class="alert-status" hidden></p>
-        </form>
+          <p id="watch-status" class="alert-status" hidden></p>
+          <ul id="watch-list" class="watch-list"></ul>
+        </div>
       </section>
       <section id="filters" class="filters" hidden>
         <div class="filter-bar" role="group" aria-label="Show drinks, food, or both">

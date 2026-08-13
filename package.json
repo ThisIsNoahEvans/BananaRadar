@@ -9,7 +9,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "emulators": "npx -y firebase-tools@latest emulators:start --only functions,hosting",
-    "deploy": "npx -y firebase-tools@latest deploy --only functions:api,hosting --project ine-things"
+    "deploy": "npx -y firebase-tools@latest deploy --only functions:api,functions:checkAlerts,hosting,firestore --project ine-things"
   },
   "engines": {
     "node": "22"
@@ -17,6 +17,8 @@
   "dependencies": {
     "express": "^4.21.2",
     "firebase-admin": "^13.5.0",
-    "firebase-functions": "^6.4.0"
+    "firebase-functions": "^6.4.0",
+    "web-push": "^3.6.7",
+    "web-push": "^3.6.7"
   }
 }

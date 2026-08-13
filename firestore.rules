@@ -1,0 +1,157 @@
+// ===============================================================
+// Assumed Data Model — banana-radar database
+// ===============================================================
+//
+// Collection: subscribers
+// Document ID: sha256(lowercase email)
+// Fields:
+//   - email: string (required, max 320) — PII, Admin SDK only
+//   - locationKey: string (required, max 32)
+//   - lat: number (required)
+//   - lng: number (required)
+//   - label: string (optional, max 80)
+//   - pushSubscriptions: list (optional, max 8 maps)
+//   - createdAt: timestamp (required, immutable)
+//   - updatedAt: timestamp (required)
+//   - lastNotifiedAt: timestamp (optional)
+//
+// Collection: watches
+// Document ID: "{lat.toFixed(3)},{lng.toFixed(3)}"
+// Fields:
+//   - lat: number (required)
+//   - lng: number (required)
+//   - lastFlavourInStock: bool | null (optional)
+//   - lastCheckedAt: timestamp (required)
+//
+// Collection: rateLimits
+// Document ID: sha256(ip)
+// Fields:
+//   - count: number (required)
+//   - windowStart: timestamp (required)
+//
+// Access: Cloud Functions Admin SDK only. No Firebase Auth.
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) ||
+        request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) ||
+        request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\\\.[a-zA-Z]{2,}$") &&
+        email.size() < 320;
+    }
+
+    function isValidPushSub(item) {
+      return item is map &&
+        item.keys().hasOnly(['endpoint', 'keys']) &&
+        item.endpoint is string &&
+        item.endpoint.size() > 8 &&
+        item.endpoint.size() <= 2048 &&
+        item.keys is map &&
+        item.keys.keys().hasOnly(['p256dh', 'auth']) &&
+        item.keys.p256dh is string &&
+        item.keys.p256dh.size() > 0 &&
+        item.keys.p256dh.size() <= 256 &&
+        item.keys.auth is string &&
+        item.keys.auth.size() > 0 &&
+        item.keys.auth.size() <= 256;
+    }
+
+    function isValidSubscriber(data) {
+      return hasRequiredFields(['email', 'locationKey', 'lat', 'lng', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['email', 'locationKey', 'lat', 'lng', 'label', 'pushSubscriptions', 'createdAt', 'updatedAt', 'lastNotifiedAt']) &&
+        isValidEmail(data.email) &&
+        validStringLength('locationKey', 3, 32) &&
+        data.lat is number && data.lat >= -90 && data.lat <= 90 &&
+        data.lng is number && data.lng >= -180 && data.lng <= 180 &&
+        (!('label' in data) || (data.label is string && data.label.size() <= 80)) &&
+        (!('pushSubscriptions' in data) ||
+          (data.pushSubscriptions is list &&
+            data.pushSubscriptions.size() <= 8 &&
+            data.pushSubscriptions.size() >= 0)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        (!('lastNotifiedAt' in data) ||
+          data.lastNotifiedAt == null ||
+          data.lastNotifiedAt is timestamp);
+    }
+
+    function isValidWatch(data) {
+      return hasRequiredFields(['lat', 'lng', 'lastCheckedAt']) &&
+        data.keys().hasOnly(['lat', 'lng', 'lastFlavourInStock', 'lastCheckedAt']) &&
+        data.lat is number && data.lat >= -90 && data.lat <= 90 &&
+        data.lng is number && data.lng >= -180 && data.lng <= 180 &&
+        data.lastCheckedAt is timestamp &&
+        (!('lastFlavourInStock' in data) ||
+          data.lastFlavourInStock == null ||
+          data.lastFlavourInStock is bool);
+    }
+
+    function isValidRateLimit(data) {
+      return hasRequiredFields(['count', 'windowStart']) &&
+        hasOnlyAllowedFields(['count', 'windowStart']) &&
+        data.count is int &&
+        data.count > 0 &&
+        data.count <= 1000 &&
+        data.windowStart is timestamp;
+    }
+
+    // Client SDK access is denied. Cloud Functions (Admin SDK) bypass rules.
+    match /subscribers/{id} {
+      allow read: if false;
+      allow create: if false && isValidSubscriber(request.resource.data);
+      allow update: if false && isValidSubscriber(request.resource.data) && isOwner(id);
+      allow delete: if false;
+    }
+
+    match /watches/{id} {
+      allow read: if false;
+      allow create: if false && isValidWatch(request.resource.data);
+      allow update: if false && isValidWatch(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /rateLimits/{id} {
+      allow read: if false;
+      allow create: if false && isValidRateLimit(request.resource.data);
+      allow update: if false && isValidRateLimit(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

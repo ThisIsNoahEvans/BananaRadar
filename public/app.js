@@ -10,11 +10,11 @@ const bananaEl = document.querySelector(".banana");
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let celebrateTimer = 0;
-const alertsEl = document.querySelector("#alerts");
-const alertForm = document.querySelector("#alert-form");
-const alertEmail = document.querySelector("#alert-email");
-const alertPush = document.querySelector("#alert-push");
-const alertStatus = document.querySelector("#alert-status");
+const watchesEl = document.querySelector("#watches");
+const watchListEl = document.querySelector("#watch-list");
+const watchHintEl = document.querySelector("#watch-hint");
+const watchStatusEl = document.querySelector("#watch-status");
+const installBtn = document.querySelector("#install");
 
 const STATUS_COPY = {
   in_stock: "Banana's on",
@@ -24,6 +24,8 @@ const STATUS_COPY = {
 
 let itemFilter = "both";
 let lastResult = null;
+let watchedStores = [];
+let deferredInstall = null;
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -56,7 +58,8 @@ document.querySelectorAll("[data-place]").forEach((btn) => {
 });
 
 summaryEl.addEventListener("click", onShareClick);
-resultsEl.addEventListener("click", onShareClick);
+resultsEl.addEventListener("click", onResultsClick);
+watchListEl.addEventListener("click", onResultsClick);
 
 filtersEl.addEventListener("click", (event) => {
   const btn = event.target.closest("[data-kind]");
@@ -74,7 +77,6 @@ async function runSearch(params) {
   summaryEl.hidden = true;
   filtersEl.hidden = true;
   resultsEl.hidden = true;
-  if (alertsEl) alertsEl.hidden = true;
   locateBtn.disabled = true;
 
   try {
@@ -95,7 +97,6 @@ function render(data) {
   const stores = data.stores || [];
   if (!stores.length) {
     filtersEl.hidden = true;
-    if (alertsEl) alertsEl.hidden = true;
     showStatus("No Starbucks found nearby. Try a broader place name.");
     return;
   }
@@ -122,7 +123,6 @@ function render(data) {
     </div>
   `;
 
-  if (alertsEl) alertsEl.hidden = false;
   filtersEl.hidden = false;
   syncFilterButtons();
   renderResults(data);
@@ -181,6 +181,17 @@ function storeCard(store) {
         <a href="${sbux}" target="_blank" rel="noreferrer">Starbucks page</a>
         <button type="button" class="share-link" data-share-text="${escapeHtml(shareLine(store))}">
           Share
+        </button>
+        <button
+          type="button"
+          class="watch-link${isWatched(store.storeNumber) ? " is-watching" : ""}"
+          data-watch="toggle"
+          data-store-number="${escapeHtml(store.storeNumber)}"
+          data-store-name="${escapeHtml(store.name)}"
+          data-store-market="${escapeHtml(store.market)}"
+          data-store-country="${escapeHtml(store.address.countryCode || "")}"
+        >
+          ${isWatched(store.storeNumber) ? "Watching" : "Notify me"}
         </button>
       </div>
     </article>
@@ -396,65 +407,167 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-if (alertForm) {
-  alertForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const origin = lastResult?.origin;
-    if (!origin) {
-      setAlertStatus("Search a place first, then add alerts.");
-      return;
-    }
-    const submit = alertForm.querySelector("button[type=submit]");
-    submit.disabled = true;
-    try {
-      let push;
-      if (alertPush?.checked) {
-        try {
-          push = await subscribePush();
-        } catch {
-          push = undefined;
-        }
-      }
-      await fetch("/api/alerts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: alertEmail.value,
-          lat: origin.lat,
-          lng: origin.lng,
-          label: origin.label,
-          push,
-        }),
-      }).catch(() => {});
-    } finally {
-      submit.disabled = false;
-      setAlertStatus("Added.");
-    }
-  });
+function isWatched(storeNumber) {
+  return watchedStores.some((store) => store.storeNumber === String(storeNumber));
 }
 
-function setAlertStatus(message) {
-  if (!alertStatus) return;
-  alertStatus.hidden = false;
-  alertStatus.textContent = message;
+function onResultsClick(event) {
+  const watchBtn = event.target.closest("[data-watch]");
+  if (watchBtn) {
+    toggleWatch(watchBtn);
+    return;
+  }
+  onShareClick(event);
+}
+
+async function toggleWatch(button) {
+  const store = {
+    storeNumber: button.dataset.storeNumber,
+    name: button.dataset.storeName,
+    market: button.dataset.storeMarket,
+    countryCode: button.dataset.storeCountry,
+  };
+  const watching = isWatched(store.storeNumber);
+  button.disabled = true;
+  try {
+    if (watching) {
+      await unwatchStore(store.storeNumber);
+      setWatchStatus(`Stopped watching ${store.name}.`);
+    } else {
+      await watchStore(store);
+      setWatchStatus(`Watching ${store.name}. We'll ping you when banana's back.`);
+    }
+    if (lastResult) renderResults(lastResult);
+  } catch (err) {
+    setWatchStatus(err.message || "Couldn't update that watch.");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function watchStore(store) {
+  const subscription = await subscribePush();
+  const res = await fetch("/api/watch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subscription, store }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Could not watch that store.");
+  watchedStores = data.stores || [];
+  renderWatchList();
+}
+
+async function unwatchStore(storeNumber) {
+  const subscription = await subscribePush();
+  const res = await fetch("/api/watch", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subscription, storeNumber }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Could not stop watching.");
+  watchedStores = data.stores || [];
+  renderWatchList();
+}
+
+function renderWatchList() {
+  if (!watchesEl) return;
+  const hasWatches = watchedStores.length > 0;
+  watchesEl.hidden = !hasWatches && !watchStatusEl?.textContent;
+  if (watchHintEl) {
+    watchHintEl.textContent = hasWatches
+      ? "We'll ping this device when banana flavour comes back at these stores."
+      : "Tap Notify me on a store to watch it. No account.";
+  }
+  watchListEl.innerHTML = watchedStores
+    .map(
+      (store) => `
+        <li>
+          <span>${escapeHtml(store.name)}</span>
+          <button
+            type="button"
+            class="watch-link is-watching"
+            data-watch="toggle"
+            data-store-number="${escapeHtml(store.storeNumber)}"
+            data-store-name="${escapeHtml(store.name)}"
+            data-store-market="${escapeHtml(store.market)}"
+            data-store-country="${escapeHtml(store.countryCode || "")}"
+          >
+            Stop
+          </button>
+        </li>`
+    )
+    .join("");
+}
+
+function setWatchStatus(message) {
+  if (!watchStatusEl) return;
+  watchStatusEl.hidden = !message;
+  watchStatusEl.textContent = message || "";
+  if (message) watchesEl.hidden = false;
 }
 
 async function subscribePush() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     throw new Error("This browser can't do push notifications.");
   }
+  if (isIos() && !isStandalone()) {
+    throw new Error(
+      "On iPhone, add Banana Radar to your Home Screen first (Share → Add to Home Screen), then tap Notify me."
+    );
+  }
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
-    throw new Error("Notifications were blocked. Email alerts still work.");
+    throw new Error("Notifications were blocked for this site.");
   }
   const reg = await navigator.serviceWorker.ready;
+  const existing = await reg.pushManager.getSubscription();
+  if (existing) return existing.toJSON();
   const keyRes = await fetch("/api/push/key");
   const { publicKey } = await keyRes.json();
+  if (!publicKey) throw new Error("Push isn't configured on the server yet.");
   const sub = await reg.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(publicKey),
   });
   return sub.toJSON();
+}
+
+async function refreshWatches() {
+  try {
+    if (!("serviceWorker" in navigator) || Notification.permission !== "granted") {
+      renderWatchList();
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      renderWatchList();
+      return;
+    }
+    const res = await fetch("/api/watches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: sub.toJSON() }),
+    });
+    const data = await res.json();
+    if (res.ok) watchedStores = data.stores || [];
+    renderWatchList();
+  } catch {
+    renderWatchList();
+  }
+}
+
+function isStandalone() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    navigator.standalone === true
+  );
+}
+
+function isIos() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -465,5 +578,19 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(() => {});
+  navigator.serviceWorker.register("/sw.js").then(refreshWatches).catch(() => {});
 }
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstall = event;
+  if (installBtn && !isStandalone()) installBtn.hidden = false;
+});
+
+installBtn?.addEventListener("click", async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  await deferredInstall.userChoice.catch(() => {});
+  deferredInstall = null;
+  installBtn.hidden = true;
+});

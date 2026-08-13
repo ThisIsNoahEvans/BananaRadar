@@ -10,14 +10,49 @@
         "firebase-debug.log",
         "firebase-debug.*.log",
         ".firebase",
-        "public"
+        "public",
+        ".env",
+        ".env.*",
+        ".firestore-rules-analysis.md"
       ]
+    }
+  ],
+  "firestore": [
+    {
+      "database": "banana-radar",
+      "location": "europe-west2",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
     }
   ],
   "hosting": {
     "site": "banana-radar",
     "public": "public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [
+      {
+        "source": "/sw.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          },
+          {
+            "key": "Service-Worker-Allowed",
+            "value": "/"
+          }
+        ]
+      },
+      {
+        "source": "/manifest.webmanifest",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/manifest+json"
+          }
+        ]
+      }
+    ],
     "rewrites": [
       {
         "source": "/api/**",
