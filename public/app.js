@@ -120,6 +120,21 @@ unitButtons.forEach((btn) => {
   });
 });
 
+bananaEl?.addEventListener("click", () => {
+  flipHomeBanana();
+});
+
+bananaEl?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  flipHomeBanana();
+});
+
+bananaEl?.addEventListener("animationend", (event) => {
+  if (event.animationName !== "banana-flip") return;
+  bananaEl.classList.remove("is-flipping");
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const q = placeInput.value.trim();
@@ -1403,8 +1418,41 @@ const CONFETTI_COLORS = ["#f6c343", "#e09412", "#00754a", "#1e3932", "#fff6df", 
 const CELEBRATE_MS = 2800;
 
 function resetBananaMood() {
-  bananaEl.classList.remove("happy", "sad");
+  bananaEl.classList.remove("happy", "sad", "is-flipping");
   radarEl.classList.remove("found", "miss");
+}
+
+function flipHomeBanana() {
+  if (!bananaEl || reducedMotion.matches) return;
+
+  const turn = () =>
+    (Math.random() < 0.5 ? 1 : -1) * (1 + Math.floor(Math.random() * 2)) * 360;
+  const twist =
+    (Math.random() < 0.5 ? 1 : -1) * Math.round(24 + Math.random() * 48);
+  const mode = Math.floor(Math.random() * 5);
+  let x = 0;
+  let y = 0;
+
+  if (mode === 0) x = turn();
+  else if (mode === 1) y = turn();
+  else if (mode === 2) {
+    x = turn();
+    y = turn() / 2;
+  } else if (mode === 3) {
+    x = turn() / 2;
+    y = turn();
+  } else {
+    x = turn();
+    y = turn();
+  }
+
+  bananaEl.style.setProperty("--flip-x", String(x));
+  bananaEl.style.setProperty("--flip-y", String(y));
+  bananaEl.style.setProperty("--flip-twist", String(twist));
+  bananaEl.style.setProperty("--flip-dur", `${620 + Math.random() * 380}ms`);
+  bananaEl.classList.remove("is-flipping");
+  void bananaEl.offsetWidth;
+  bananaEl.classList.add("is-flipping");
 }
 
 function celebrate() {

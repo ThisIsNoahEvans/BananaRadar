@@ -68,10 +68,18 @@
 
     <main>
       <section class="hero">
-        <div id="radar" class="radar" aria-hidden="true">
-          <span class="ping"></span>
-          <span class="ping delay"></span>
-          <img src="/banana.svg" class="banana" alt="Banana" />
+        <div id="radar" class="radar">
+          <span class="ping" aria-hidden="true"></span>
+          <span class="ping delay" aria-hidden="true"></span>
+          <img
+            src="/banana.svg"
+            class="banana"
+            alt=""
+            role="button"
+            tabindex="0"
+            aria-label="Flip the banana"
+            draggable="false"
+          />
         </div>
         <h1>Has your local gone <em>bananas</em>?</h1>
         <p class="lede">
