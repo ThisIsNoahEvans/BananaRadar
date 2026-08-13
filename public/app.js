@@ -3,13 +3,27 @@ const locateBtn = document.querySelector("#locate");
 const placeInput = document.querySelector("#place");
 const statusEl = document.querySelector("#status");
 const summaryEl = document.querySelector("#summary");
+const filtersEl = document.querySelector("#filters");
 const resultsEl = document.querySelector("#results");
+const radarEl = document.querySelector(".radar");
+const bananaEl = document.querySelector(".banana");
+
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let celebrateTimer = 0;
+const alertsEl = document.querySelector("#alerts");
+const alertForm = document.querySelector("#alert-form");
+const alertEmail = document.querySelector("#alert-email");
+const alertPush = document.querySelector("#alert-push");
+const alertStatus = document.querySelector("#alert-status");
 
 const STATUS_COPY = {
   in_stock: "Banana's on",
   sold_out: "Sold out",
   unknown: "Can't tell",
 };
+
+let itemFilter = "both";
+let lastResult = null;
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -44,10 +58,23 @@ document.querySelectorAll("[data-place]").forEach((btn) => {
 summaryEl.addEventListener("click", onShareClick);
 resultsEl.addEventListener("click", onShareClick);
 
+filtersEl.addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-kind]");
+  if (!btn) return;
+  itemFilter = btn.dataset.kind;
+  syncFilterButtons();
+  if (lastResult) renderResults(lastResult);
+});
+
 async function runSearch(params) {
+  bananaEl.classList.remove("happy");
+  radarEl.classList.remove("found");
+  document.querySelector(".celebrate")?.remove();
   showStatus("Checking live Starbucks menus… this takes a few seconds.");
   summaryEl.hidden = true;
+  filtersEl.hidden = true;
   resultsEl.hidden = true;
+  if (alertsEl) alertsEl.hidden = true;
   locateBtn.disabled = true;
 
   try {
@@ -64,8 +91,11 @@ async function runSearch(params) {
 }
 
 function render(data) {
+  lastResult = data;
   const stores = data.stores || [];
   if (!stores.length) {
+    filtersEl.hidden = true;
+    if (alertsEl) alertsEl.hidden = true;
     showStatus("No Starbucks found nearby. Try a broader place name.");
     return;
   }
@@ -80,7 +110,7 @@ function render(data) {
 
   summaryEl.hidden = false;
   summaryEl.innerHTML = `
-    <div class="summary-card">
+    <div class="summary-card${hits ? " hit" : ""}">
       <div>
         <h2>${headline(hits, stores.length)}</h2>
         <p>${hits} of ${stores.length} nearby stores have the banana flavour on the menu${label}.</p>
@@ -92,8 +122,25 @@ function render(data) {
     </div>
   `;
 
+  if (alertsEl) alertsEl.hidden = false;
+  filtersEl.hidden = false;
+  syncFilterButtons();
+  renderResults(data);
+
+  if (hits > 0) celebrate();
+}
+
+function renderResults(data) {
   resultsEl.hidden = false;
-  resultsEl.innerHTML = stores.map(storeCard).join("");
+  resultsEl.innerHTML = (data.stores || []).map(storeCard).join("");
+}
+
+function syncFilterButtons() {
+  filtersEl.querySelectorAll("[data-kind]").forEach((btn) => {
+    const active = btn.dataset.kind === itemFilter;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-pressed", String(active));
+  });
 }
 
 function headline(hits, total) {
@@ -111,15 +158,8 @@ function storeCard(store) {
     store.market === "us"
       ? `https://www.starbucks.com/store-locator/store/${store.id}`
       : `https://www.starbucks.co.uk/store-locator/${store.storeNumber}`;
-  const items = (store.items || [])
-    .map(
-      (item) => `
-        <span class="chip">
-          <span class="dot ${item.inStock ? "ok" : ""}"></span>
-          ${escapeHtml(item.name)}
-        </span>`
-    )
-    .join("");
+  const drinks = store.drinks || itemsOfKind(store, "drink");
+  const food = store.food || itemsOfKind(store, "food");
 
   return `
     <article class="card">
@@ -135,9 +175,7 @@ function storeCard(store) {
         </div>
         <span class="badge ${store.status}">${badge}</span>
       </div>
-      <div class="items">
-        ${items || `<span class="chip">No live banana items on this store’s published menu</span>`}
-      </div>
+      ${itemGroups(drinks, food)}
       <div class="card-links">
         <a href="${maps}" target="_blank" rel="noreferrer">Directions</a>
         <a href="${sbux}" target="_blank" rel="noreferrer">Starbucks page</a>
@@ -147,6 +185,50 @@ function storeCard(store) {
       </div>
     </article>
   `;
+}
+
+function itemsOfKind(store, kind) {
+  return (store.items || []).filter((item) => item.kind === kind);
+}
+
+function itemGroups(drinks, food) {
+  const showDrinks = itemFilter !== "food";
+  const showFood = itemFilter !== "drinks";
+
+  if (showDrinks && showFood && !drinks.length && !food.length) {
+    return `<div class="items">
+      <span class="chip">No live banana items on this store’s published menu</span>
+    </div>`;
+  }
+
+  return [
+    showDrinks &&
+      itemGroup("Drinks", drinks, "No banana drinks on this menu"),
+    showFood && itemGroup("Food", food, "No banana food on this menu"),
+  ]
+    .filter(Boolean)
+    .join("");
+}
+
+function itemGroup(label, items, emptyCopy) {
+  const chips = items.length
+    ? items.map(itemChip).join("")
+    : `<span class="chip muted">${emptyCopy}</span>`;
+
+  return `
+    <div class="item-group">
+      <h4 class="item-heading">${label}</h4>
+      <div class="items">${chips}</div>
+    </div>
+  `;
+}
+
+function itemChip(item) {
+  return `
+    <span class="chip">
+      <span class="dot ${item.inStock ? "ok" : ""}"></span>
+      ${escapeHtml(item.name)}
+    </span>`;
 }
 
 function formatKm(km) {
@@ -221,6 +303,73 @@ function flashLabel(button, label) {
   );
 }
 
+function celebrate() {
+  if (reducedMotion.matches) return;
+
+  bananaEl.classList.remove("happy");
+  radarEl.classList.remove("found");
+  void bananaEl.offsetWidth;
+  bananaEl.classList.add("happy");
+  radarEl.classList.add("found");
+
+  burstBananas();
+
+  window.clearTimeout(celebrateTimer);
+  celebrateTimer = window.setTimeout(() => {
+    bananaEl.classList.remove("happy");
+    radarEl.classList.remove("found");
+  }, 1600);
+}
+
+function burstBananas() {
+  document.querySelector(".celebrate")?.remove();
+
+  const layer = document.createElement("div");
+  layer.className = "celebrate";
+  layer.setAttribute("aria-hidden", "true");
+
+  const origin = bananaEl.getBoundingClientRect();
+  const cx = origin.left + origin.width / 2;
+  const cy = origin.top + origin.height / 2;
+  const bits = [
+    "🍌",
+    "🍌",
+    "🍌",
+    "🍌",
+    "🍌",
+    "🍌",
+    "dot",
+    "dot",
+    "dot",
+    "dot",
+    "chip",
+    "chip",
+    "chip",
+    "chip",
+  ];
+
+  for (const kind of bits) {
+    const piece = document.createElement("span");
+    piece.className = `celebrate-piece ${kind === "🍌" ? "emoji" : `confetti-${kind}`}`;
+    if (kind === "🍌") piece.textContent = kind;
+
+    const angle = (Math.random() * 140 - 70) * (Math.PI / 180);
+    const dist = 90 + Math.random() * 160;
+    piece.style.setProperty("--x", `${cx}px`);
+    piece.style.setProperty("--y", `${cy}px`);
+    piece.style.setProperty("--dx", `${Math.sin(angle) * dist}px`);
+    piece.style.setProperty("--dy", `${70 + Math.random() * 90}px`);
+    piece.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 280}deg`);
+    piece.style.setProperty("--delay", `${Math.random() * 90}ms`);
+    piece.style.setProperty("--dur", `${900 + Math.random() * 500}ms`);
+    piece.style.setProperty("--size", `${18 + Math.random() * 10}px`);
+    layer.appendChild(piece);
+  }
+
+  document.body.appendChild(layer);
+  window.setTimeout(() => layer.remove(), 1700);
+}
+
 function showStatus(message) {
   statusEl.hidden = false;
   statusEl.textContent = message;
@@ -245,4 +394,76 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+if (alertForm) {
+  alertForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const origin = lastResult?.origin;
+    if (!origin) {
+      setAlertStatus("Search a place first, then add alerts.");
+      return;
+    }
+    const submit = alertForm.querySelector("button[type=submit]");
+    submit.disabled = true;
+    try {
+      let push;
+      if (alertPush?.checked) {
+        try {
+          push = await subscribePush();
+        } catch {
+          push = undefined;
+        }
+      }
+      await fetch("/api/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: alertEmail.value,
+          lat: origin.lat,
+          lng: origin.lng,
+          label: origin.label,
+          push,
+        }),
+      }).catch(() => {});
+    } finally {
+      submit.disabled = false;
+      setAlertStatus("Added.");
+    }
+  });
+}
+
+function setAlertStatus(message) {
+  if (!alertStatus) return;
+  alertStatus.hidden = false;
+  alertStatus.textContent = message;
+}
+
+async function subscribePush() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    throw new Error("This browser can't do push notifications.");
+  }
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") {
+    throw new Error("Notifications were blocked. Email alerts still work.");
+  }
+  const reg = await navigator.serviceWorker.ready;
+  const keyRes = await fetch("/api/push/key");
+  const { publicKey } = await keyRes.json();
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
+  });
+  return sub.toJSON();
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replaceAll("-", "+").replaceAll("_", "/");
+  const raw = atob(base64);
+  return Uint8Array.from(raw, (char) => char.charCodeAt(0));
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
