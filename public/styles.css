@@ -169,6 +169,18 @@ h1 em {
   color: var(--green);
 }
 
+.btn.ghost {
+  margin-top: 14px;
+  background: transparent;
+  color: var(--banana);
+  box-shadow: inset 0 0 0 2px rgba(246, 195, 67, 0.55);
+  padding: 8px 14px;
+}
+
+.btn.ghost:hover {
+  background: rgba(246, 195, 67, 0.12);
+}
+
 .btn:hover {
   transform: translateY(-1px);
 }
@@ -316,17 +328,29 @@ h1 em {
 
 .card-links {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 14px;
   margin-top: 12px;
 }
 
-.card-links a {
+.card-links a,
+.share-link {
   color: var(--green-2);
+  font: inherit;
   font-weight: 600;
   text-decoration: none;
 }
 
-.card-links a:hover {
+.share-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.card-links a:hover,
+.share-link:hover {
   text-decoration: underline;
 }
 

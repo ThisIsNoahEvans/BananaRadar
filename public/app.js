@@ -41,6 +41,9 @@ document.querySelectorAll("[data-place]").forEach((btn) => {
   });
 });
 
+summaryEl.addEventListener("click", onShareClick);
+resultsEl.addEventListener("click", onShareClick);
+
 async function runSearch(params) {
   showStatus("Checking live Starbucks menus… this takes a few seconds.");
   summaryEl.hidden = true;
@@ -69,6 +72,10 @@ function render(data) {
 
   const hits = data.summary?.flavourInStock || 0;
   const label = data.origin?.label ? ` near ${data.origin.label}` : "";
+  const nearestHit = stores.find((store) => store.flavourInStock);
+  const shareText = nearestHit
+    ? shareLine(nearestHit)
+    : `It's a sad banana day${label} — none of the ${stores.length} nearby stores have the banana flavour.`;
   statusEl.hidden = true;
 
   summaryEl.hidden = false;
@@ -77,6 +84,9 @@ function render(data) {
       <div>
         <h2>${headline(hits, stores.length)}</h2>
         <p>${hits} of ${stores.length} nearby stores have the banana flavour on the menu${label}.</p>
+        <button type="button" class="btn ghost share-btn" data-share-text="${escapeHtml(shareText)}">
+          Share
+        </button>
       </div>
       <div class="score">${hits}/${stores.length}</div>
     </div>
@@ -131,6 +141,9 @@ function storeCard(store) {
       <div class="card-links">
         <a href="${maps}" target="_blank" rel="noreferrer">Directions</a>
         <a href="${sbux}" target="_blank" rel="noreferrer">Starbucks page</a>
+        <button type="button" class="share-link" data-share-text="${escapeHtml(shareLine(store))}">
+          Share
+        </button>
       </div>
     </article>
   `;
@@ -141,6 +154,71 @@ function formatKm(km) {
   if (km < 0.1) return "Right by you";
   if (km < 1) return `${Math.round(km * 1000)} m`;
   return `${km.toFixed(km < 10 ? 1 : 0)} km`;
+}
+
+function shareLine(store) {
+  const distance = formatKm(store.distanceKm);
+  const where = distance ? `${store.name} (${distance})` : store.name;
+  if (store.flavourInStock) return `Banana's on at ${where}`;
+  if (store.status === "sold_out") return `Banana's sold out at ${where}`;
+  return `Can't tell if banana's on at ${where}`;
+}
+
+function onShareClick(event) {
+  const btn = event.target.closest("[data-share-text]");
+  if (!btn) return;
+  shareOrCopy(btn.dataset.shareText, btn);
+}
+
+async function shareOrCopy(text, button) {
+  const payload = { title: "Banana Radar", text };
+  try {
+    if (typeof navigator.share === "function") {
+      if (!navigator.canShare || navigator.canShare(payload)) {
+        await navigator.share(payload);
+        return;
+      }
+    }
+  } catch (err) {
+    if (err?.name === "AbortError") return;
+  }
+
+  try {
+    await copyText(text);
+    flashLabel(button, "Copied!");
+  } catch {
+    flashLabel(button, "Couldn't copy");
+  }
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const input = document.createElement("textarea");
+  input.value = text;
+  input.setAttribute("readonly", "");
+  input.style.position = "fixed";
+  input.style.left = "-9999px";
+  document.body.appendChild(input);
+  input.select();
+  const ok = document.execCommand("copy");
+  input.remove();
+  if (!ok) throw new Error("copy failed");
+}
+
+function flashLabel(button, label) {
+  const original = button.dataset.shareLabel || button.textContent.trim();
+  button.dataset.shareLabel = original;
+  button.textContent = label;
+  window.clearTimeout(Number(button.dataset.shareTimer));
+  button.dataset.shareTimer = String(
+    window.setTimeout(() => {
+      button.textContent = original;
+    }, 1600)
+  );
 }
 
 function showStatus(message) {
