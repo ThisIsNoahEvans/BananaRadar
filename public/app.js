@@ -270,9 +270,7 @@ async function readNdjson(response, signal, onEvent) {
 function handleProgress(event) {
   if (event.type === "origin") {
     const label = event.origin?.label || "your area";
-    showStatus(`Found ${escapeHtml(label)}. Looking up nearby stores…`, {
-      loading: true,
-    });
+    showStatus(`Found ${label}. Looking up nearby stores…`);
     renderScanningSummary({
       origin: event.origin,
       total: 0,
@@ -285,7 +283,7 @@ function handleProgress(event) {
 
   if (event.type === "stores") {
     if (!event.stores?.length) return;
-    showStatus("Checking live Starbucks menus…", { loading: true });
+    showStatus("Checking live Starbucks menus…");
     renderScanningSummary({
       origin: event.origin,
       total: event.stores.length,
@@ -311,14 +309,13 @@ function handleProgress(event) {
       hits,
     });
     showStatus(
-      `Checking live menus… ${filled.length} of ${cards.length} stores`,
-      { loading: true }
+      `Checking live menus… ${filled.length} of ${cards.length} stores`
     );
   }
 }
 
 function beginSkeletonState(status = "Finding nearby Starbucks…") {
-  showStatus(status, { loading: true });
+  showStatus(status);
   toolbarEl.hidden = true;
   spotlightEl.hidden = true;
   spotlightEl.innerHTML = "";
@@ -1130,19 +1127,13 @@ function addSadFlyers(layer) {
   }
 }
 
-function showStatus(message, { loading = false } = {}) {
+function showStatus(message) {
   statusEl.hidden = false;
-  statusEl.classList.toggle("is-loading", loading);
-  if (loading) {
-    statusEl.innerHTML = `<span class="status-spinner" aria-hidden="true"></span><span>${message}</span>`;
-    return;
-  }
   statusEl.textContent = message;
 }
 
 function hideStatus() {
   statusEl.hidden = true;
-  statusEl.classList.remove("is-loading");
   statusEl.textContent = "";
 }
 
