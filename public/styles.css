@@ -955,16 +955,13 @@ footer {
 
 @keyframes banana-flip {
   0% {
-    transform: rotateX(0deg) rotateY(0deg) rotateZ(-8deg) scale(1);
+    transform: rotate(calc(-8deg)) scale(1);
   }
   55% {
-    transform: rotateX(calc(var(--flip-x) * 0.55 * 1deg))
-      rotateY(calc(var(--flip-y) * 0.55 * 1deg))
-      rotateZ(calc(var(--flip-twist) * 1deg)) scale(1.1);
+    transform: rotate(calc(-8deg + var(--flip-dir) * 198deg)) scale(1.08);
   }
   100% {
-    transform: rotateX(calc(var(--flip-x) * 1deg))
-      rotateY(calc(var(--flip-y) * 1deg)) rotateZ(-8deg) scale(1);
+    transform: rotate(calc(-8deg + var(--flip-dir) * 360deg)) scale(1);
   }
 }
 
