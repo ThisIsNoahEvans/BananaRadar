@@ -44,9 +44,7 @@ export function createApiApp({
       res.json(result);
     } catch (err) {
       const message = err?.message || "Could not check Starbucks stock.";
-      const status = /share your location|coordinates|postcode|place/i.test(
-        message
-      )
+      const status = /share your location|coordinates|postcode|place/i.test(message)
         ? 400
         : 502;
       res.status(status).json({ error: message });
