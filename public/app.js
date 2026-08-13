@@ -405,16 +405,8 @@ function hasVisibleBanana(data, openOnly) {
   return visible.some((store) => store.flavourInStock);
 }
 
-function render(data, { doCelebrate = true } = {}) {
-  lastResult = data;
-  setSearching(false);
-  const stores = data.stores || [];
-  if (!stores.length) {
-    hideListUi();
-    showStatus("No Starbucks found nearby. Try a broader place name.");
-    return;
-  }
-
+function resultView(data) {
+  const stores = data?.stores || [];
   const ranked = sortInStockFirst(stores);
   const visible = openOnlyEl.checked
     ? ranked.filter((store) => store.isOpen)
@@ -424,71 +416,107 @@ function render(data, { doCelebrate = true } = {}) {
   const closedHits = stores.filter(
     (store) => store.flavourInStock && !store.isOpen
   ).length;
-  const label = data.origin?.label ? ` near ${data.origin.label}` : "";
-  const checkedAt = formatCheckedAt(data.checkedAt);
+  const label = data?.origin?.label ? ` near ${data.origin.label}` : "";
+  const title = headline(hits, visible.length, {
+    closedHits,
+    noneVisible: visible.length === 0,
+  });
+  const score = visible.length ? `${hits}/${visible.length}` : "0";
   const nearestHit = visible.find((store) => store.flavourInStock);
+  return {
+    stores,
+    ranked,
+    visible,
+    hiddenClosed,
+    hits,
+    closedHits,
+    label,
+    title,
+    score,
+    nearestHit,
+    origin: data?.origin?.label || "",
+    checkedAt: formatCheckedAt(data?.checkedAt),
+  };
+}
+
+function render(data, { doCelebrate = true } = {}) {
+  lastResult = data;
+  setSearching(false);
+  const view = resultView(data);
+  if (!view.stores.length) {
+    hideListUi();
+    showStatus("No Starbucks found nearby. Try a broader place name.");
+    return;
+  }
+
   const emptyJoke =
-    hits === 0
+    view.hits === 0
       ? doCelebrate
         ? nextEmptyHeadline()
         : lastEmptyJoke || nextEmptyHeadline()
       : "";
   lastEmptyJoke = emptyJoke;
-  const shareText = nearestHit
-    ? shareLine(nearestHit)
-    : `${(emptyJoke || "It's a sad banana day.").replace(/\.$/, "")}${label} — none of the ${visible.length || stores.length} nearby stores have the banana flavour.`;
+  const cardBody =
+    emptyJoke ||
+    summaryCopy(
+      view.hits,
+      view.visible.length,
+      view.stores.length,
+      view.label,
+      openOnlyEl.checked
+    );
+  const shareText = view.hits
+    ? `${view.title} ${cardBody}`
+    : `${(emptyJoke || "It's a sad banana day.").replace(/\.$/, "")}${view.label} — none of the ${view.visible.length || view.stores.length} nearby stores have the banana flavour.`;
   hideStatus();
 
   summaryEl.hidden = false;
   summaryEl.innerHTML = `
-    <div class="summary-card${hits ? " hit" : ""} is-ready">
+    <div class="summary-card${view.hits ? " hit" : ""} is-ready">
       <div>
-        <h2>${escapeHtml(headline(hits, visible.length, {
-          closedHits,
-          noneVisible: visible.length === 0,
-        }))}</h2>
-        <p>${escapeHtml(emptyJoke || summaryCopy(hits, visible.length, stores.length, label, openOnlyEl.checked))}</p>
-        ${checkedAt ? `<p class="checked-at">${escapeHtml(checkedAt)}</p>` : ""}
-        <button type="button" class="btn ghost share-btn" data-share-text="${escapeHtml(shareText)}">
+        <h2>${escapeHtml(view.title)}</h2>
+        <p>${escapeHtml(cardBody)}</p>
+        ${view.checkedAt ? `<p class="checked-at">${escapeHtml(view.checkedAt)}</p>` : ""}
+        <button type="button" class="btn ghost share-btn" data-share="summary" data-share-text="${escapeHtml(shareText)}">
           Share
         </button>
       </div>
-      <div class="score">${visible.length ? `${hits}/${visible.length}` : "0"}</div>
+      <div class="score">${escapeHtml(view.score)}</div>
     </div>
   `;
 
   toolbarEl.hidden = false;
   filterNoteEl.textContent =
-    openOnlyEl.checked && hiddenClosed
-      ? `${hiddenClosed} closed ${hiddenClosed === 1 ? "store" : "stores"} hidden`
+    openOnlyEl.checked && view.hiddenClosed
+      ? `${view.hiddenClosed} closed ${view.hiddenClosed === 1 ? "store" : "stores"} hidden`
       : "";
 
-  if (nearestHit) {
+  if (view.nearestHit) {
     spotlightEl.hidden = false;
-    spotlightEl.innerHTML = spotlightCard(nearestHit, hits);
+    spotlightEl.innerHTML = spotlightCard(view.nearestHit, view.hits);
   } else {
     spotlightEl.hidden = true;
     spotlightEl.innerHTML = "";
   }
 
-  const rest = nearestHit
-    ? visible.filter((store) => storeKey(store) !== storeKey(nearestHit))
-    : visible;
+  const rest = view.nearestHit
+    ? view.visible.filter((store) => storeKey(store) !== storeKey(view.nearestHit))
+    : view.visible;
 
   resultsEl.removeAttribute("aria-busy");
   if (!rest.length) {
     resultsEl.hidden = false;
-    resultsEl.innerHTML = visible.length
+    resultsEl.innerHTML = view.visible.length
       ? ""
       : `<p class="empty">All nearby stores are closed. Turn off Open only to see them.</p>`;
   } else {
     resultsEl.hidden = false;
     resultsEl.innerHTML =
-      (nearestHit ? `<p class="results-label">Other nearby stores</p>` : "") +
+      (view.nearestHit ? `<p class="results-label">Other nearby stores</p>` : "") +
       rest.map((store, index) => storeCard(store, { filled: true, index })).join("");
   }
 
-  if (doCelebrate && hits > 0) celebrate();
+  if (doCelebrate && view.hits > 0) celebrate();
   else if (doCelebrate) lament();
 }
 
@@ -668,7 +696,7 @@ function spotlightCard(store, hitCount) {
       <div class="spotlight-actions">
         <a class="btn primary" href="${mapsUrl(store)}" target="_blank" rel="noreferrer">Go here</a>
         <a class="btn secondary" href="${starbucksUrl(store)}" target="_blank" rel="noreferrer">Starbucks page</a>
-        <button type="button" class="share-link" data-share-text="${escapeHtml(shareLine(store))}">
+        <button type="button" class="share-link" data-share="store" data-store-number="${escapeHtml(store.storeNumber)}" data-share-text="${escapeHtml(shareLine(store))}">
           Share
         </button>
         ${watchButton(store)}
@@ -701,7 +729,7 @@ function storeCard(store, { filled = false, index = 0 } = {}) {
       <div class="card-links">
         <a href="${mapsUrl(store)}" target="_blank" rel="noreferrer">Directions</a>
         <a href="${starbucksUrl(store)}" target="_blank" rel="noreferrer">Starbucks page</a>
-        <button type="button" class="share-link" data-share-text="${escapeHtml(shareLine(store))}">
+        <button type="button" class="share-link" data-share="store" data-store-number="${escapeHtml(store.storeNumber)}" data-share-text="${escapeHtml(shareLine(store))}">
           Share
         </button>
         ${watchButton(store)}
@@ -846,15 +874,34 @@ function shareLine(store) {
 function onShareClick(event) {
   const btn = event.target.closest("[data-share-text]");
   if (!btn) return;
-  shareOrCopy(btn.dataset.shareText, btn);
+  shareOrCopy(btn);
 }
 
-async function shareOrCopy(text, button) {
-  const payload = { title: "Banana Radar", text };
+async function shareOrCopy(button) {
+  const text = button.dataset.shareText;
+  const spec = shareSpecFromButton(button);
+  let file = null;
+  try {
+    if (spec) file = makeShareFile(spec);
+  } catch {
+    file = null;
+  }
+  const title = "Banana Radar";
+  const withFile = file ? { title, text, files: [file] } : null;
+  const textOnly = { title, text };
+
   try {
     if (typeof navigator.share === "function") {
-      if (!navigator.canShare || navigator.canShare(payload)) {
-        await navigator.share(payload);
+      if (withFile && navigator.canShare?.(withFile)) {
+        try {
+          await navigator.share(withFile);
+          return;
+        } catch (err) {
+          if (err?.name === "AbortError") return;
+        }
+      }
+      if (!navigator.canShare || navigator.canShare(textOnly)) {
+        await navigator.share(textOnly);
         return;
       }
     }
@@ -867,6 +914,265 @@ async function shareOrCopy(text, button) {
     flashLabel(button, "Copied!");
   } catch {
     flashLabel(button, "Couldn't copy");
+  }
+}
+
+function shareSpecFromButton(button) {
+  if (button.dataset.share === "store") {
+    const store = lastResult?.stores?.find(
+      (item) => String(item.storeNumber) === String(button.dataset.storeNumber)
+    );
+    return store ? storeShareSpec(store) : summaryShareSpec();
+  }
+  return summaryShareSpec();
+}
+
+function summaryShareSpec() {
+  if (!lastResult) return null;
+  const view = resultView(lastResult);
+  const fact = summaryCopy(
+    view.hits,
+    view.visible.length,
+    view.stores.length,
+    view.label,
+    openOnlyEl.checked
+  );
+  const joke = view.hits === 0 ? lastEmptyJoke : "";
+  return {
+    mood: view.hits ? "hit" : "miss",
+    kicker: view.origin ? `Near ${view.origin}` : "Live menu check",
+    title: joke || view.title,
+    body: fact,
+    score: view.score,
+    slug: joke || view.title,
+  };
+}
+
+function storeShareSpec(store) {
+  const inStock = (store.items || [])
+    .filter((item) => item.inStock)
+    .map((item) => item.name);
+  return {
+    mood: store.flavourInStock ? "hit" : "miss",
+    kicker: STATUS_COPY[store.status] || STATUS_COPY.unknown,
+    title: store.name,
+    body: [
+      formatDistance(store.distanceKm),
+      store.isOpen ? "Open" : "Closed",
+      store.hoursLabel,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    detail: store.address?.singleLine || "",
+    chips: (inStock.length ? inStock : (store.items || []).map((item) => item.name)).slice(
+      0,
+      3
+    ),
+    score: "",
+    slug: store.name,
+  };
+}
+
+const SHARE_W = 1200;
+const SHARE_H = 630;
+
+function makeShareFile(spec) {
+  const canvas = document.createElement("canvas");
+  canvas.width = SHARE_W;
+  canvas.height = SHARE_H;
+  const ctx = canvas.getContext("2d");
+  drawShareCard(ctx, spec);
+  const dataUrl = canvas.toDataURL("image/png");
+  const bytes = atob(dataUrl.split(",")[1]);
+  const data = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) data[i] = bytes.charCodeAt(i);
+  return new File([data], `banana-radar-${slugify(spec.slug)}.png`, {
+    type: "image/png",
+  });
+}
+
+function slugify(value) {
+  return (
+    String(value || "card")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "card"
+  );
+}
+
+function drawShareCard(ctx, spec) {
+  const hit = spec.mood === "hit";
+  ctx.fillStyle = "#fff6df";
+  ctx.fillRect(0, 0, SHARE_W, SHARE_H);
+
+  const bananaGlow = ctx.createRadialGradient(180, 40, 20, 180, 40, 520);
+  bananaGlow.addColorStop(0, "rgba(246, 195, 67, 0.5)");
+  bananaGlow.addColorStop(1, "rgba(246, 195, 67, 0)");
+  ctx.fillStyle = bananaGlow;
+  ctx.fillRect(0, 0, SHARE_W, SHARE_H);
+
+  const greenGlow = ctx.createRadialGradient(1120, 80, 10, 1120, 80, 420);
+  greenGlow.addColorStop(0, "rgba(0, 117, 74, 0.2)");
+  greenGlow.addColorStop(1, "rgba(0, 117, 74, 0)");
+  ctx.fillStyle = greenGlow;
+  ctx.fillRect(0, 0, SHARE_W, SHARE_H);
+
+  ctx.save();
+  ctx.shadowColor = "rgba(30, 57, 50, 0.2)";
+  ctx.shadowBlur = 40;
+  ctx.shadowOffsetY = 16;
+  ctx.fillStyle = "#1e3932";
+  ctx.beginPath();
+  ctx.roundRect(48, 48, 1104, 534, 36);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(96, 100, 10, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff6df";
+  ctx.fill();
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = "#f6c343";
+  ctx.stroke();
+
+  ctx.font = "700 20px Outfit, system-ui, sans-serif";
+  ctx.fillStyle = "#fff6df";
+  ctx.fillText("Banana Radar", 118, 107);
+
+  ctx.font = "700 15px Outfit, system-ui, sans-serif";
+  ctx.fillStyle = "#f6c343";
+  ctx.fillText(
+    ellipsis(ctx, String(spec.kicker || "").toUpperCase(), 640),
+    80,
+    168
+  );
+
+  const textMax = 640;
+  ctx.fillStyle = "#fff6df";
+  const title = fitHeadline(ctx, spec.title, textMax, 3);
+  let y = 188;
+  for (const line of title.lines) {
+    y += title.size * 1.08;
+    ctx.font = `700 ${title.size}px Fraunces, Georgia, serif`;
+    ctx.fillText(line, 80, y);
+  }
+
+  ctx.font = "500 26px Outfit, system-ui, sans-serif";
+  ctx.fillStyle = "rgba(255, 246, 223, 0.78)";
+  const bodyLines = wrapLines(ctx, spec.body, textMax, spec.chips?.length ? 2 : 3);
+  y += 28;
+  for (const line of bodyLines) {
+    y += 34;
+    ctx.fillText(line, 80, y);
+  }
+
+  if (spec.detail && y < 470) {
+    ctx.font = "500 22px Outfit, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(255, 246, 223, 0.5)";
+    y += 32;
+    ctx.fillText(ellipsis(ctx, spec.detail, textMax), 80, y);
+  }
+
+  if (spec.chips?.length && y < 470) {
+    y += 28;
+    let x = 80;
+    ctx.font = "600 18px Outfit, system-ui, sans-serif";
+    for (const chip of spec.chips) {
+      const label = ellipsis(ctx, chip, 260);
+      const width = Math.min(280, ctx.measureText(label).width + 36);
+      if (x + width > 720) break;
+      ctx.fillStyle = "rgba(255, 246, 223, 0.12)";
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, 36, 18);
+      ctx.fill();
+      ctx.fillStyle = "#fff6df";
+      ctx.fillText(label, x + 18, y + 24);
+      x += width + 10;
+    }
+  }
+
+  if (spec.score) {
+    ctx.font = "700 72px Fraunces, Georgia, serif";
+    ctx.fillStyle = "#f6c343";
+    ctx.textAlign = "right";
+    ctx.fillText(spec.score, 1112, 538);
+    ctx.textAlign = "left";
+  }
+
+  drawShareBanana(ctx, hit);
+
+  ctx.font = "600 18px Outfit, system-ui, sans-serif";
+  ctx.fillStyle = "rgba(255, 246, 223, 0.42)";
+  ctx.fillText("banana.itsnoahevans.co.uk", 80, 548);
+}
+
+function fitHeadline(ctx, text, maxWidth, maxLines) {
+  for (const size of [58, 50, 44, 38]) {
+    ctx.font = `700 ${size}px Fraunces, Georgia, serif`;
+    const lines = wrapLines(ctx, text, maxWidth, maxLines);
+    const clipped = lines[lines.length - 1]?.endsWith("…");
+    if (!clipped || size === 38) return { size, lines };
+  }
+  return { size: 38, lines: wrapLines(ctx, text, maxWidth, maxLines) };
+}
+
+function wrapLines(ctx, text, maxWidth, maxLines) {
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const lines = [];
+  let current = "";
+  for (let i = 0; i < words.length; i++) {
+    const next = current ? `${current} ${words[i]}` : words[i];
+    if (ctx.measureText(next).width <= maxWidth || !current) {
+      current = next;
+      continue;
+    }
+    lines.push(current);
+    current = words[i];
+    if (lines.length === maxLines - 1) {
+      lines.push(ellipsis(ctx, [current, ...words.slice(i + 1)].join(" "), maxWidth));
+      return lines;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.slice(0, maxLines);
+}
+
+function ellipsis(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let cut = text;
+  while (cut.length && ctx.measureText(`${cut}…`).width > maxWidth) {
+    cut = cut.slice(0, -1);
+  }
+  return `${cut}…`;
+}
+
+function drawShareBanana(ctx, hit) {
+  ctx.save();
+  ctx.translate(930, 318);
+  ctx.strokeStyle = hit ? "rgba(246, 195, 67, 0.28)" : "rgba(255, 246, 223, 0.14)";
+  for (const [radius, width] of [
+    [78, 3],
+    [118, 3],
+    [158, 2.5],
+    [198, 2],
+  ]) {
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  const size = 268;
+  const x = 796;
+  const y = 184;
+  if (bananaEl?.complete && bananaEl.naturalWidth) {
+    ctx.save();
+    if (!hit) ctx.filter = "grayscale(0.32) saturate(0.7)";
+    ctx.drawImage(bananaEl, x, y, size, size);
+    ctx.restore();
   }
 }
 
