@@ -9,7 +9,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "emulators": "npx -y firebase-tools@latest emulators:start --only functions,hosting",
-    "deploy": "npx -y firebase-tools@latest deploy --only functions,hosting"
+    "deploy": "npx -y firebase-tools@latest deploy --only functions:api,hosting --project ine-things"
   },
   "engines": {
     "node": "22"
