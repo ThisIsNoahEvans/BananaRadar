@@ -78,10 +78,42 @@ footer {
   gap: 12px;
 }
 
+.top-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .eyebrow {
   margin: 0;
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.unit-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(30, 57, 50, 0.08);
+}
+
+.unit-toggle button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.unit-toggle button[aria-pressed="true"] {
+  background: var(--green);
+  color: var(--banana);
 }
 
 .hero {
@@ -941,6 +973,10 @@ footer {
     flex-direction: column;
     align-items: flex-end;
     gap: 4px;
+  }
+
+  .eyebrow {
+    display: none;
   }
 
   .spotlight-actions .btn {

@@ -1,4 +1,5 @@
 const OPEN_ONLY_KEY = "banana-radar:open-only";
+const UNIT_KEY = "banana-radar:distance-unit";
 const EMPTY_JOKE_KEY = "banana-empty-jokes";
 const ANON_SKELETONS = 5;
 
@@ -21,6 +22,7 @@ const watchListEl = document.querySelector("#watch-list");
 const watchHintEl = document.querySelector("#watch-hint");
 const watchStatusEl = document.querySelector("#watch-status");
 const installBtn = document.querySelector("#install");
+const unitButtons = document.querySelectorAll("[data-unit]");
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let celebrateTimer = 0;
@@ -90,7 +92,9 @@ let lastResult = null;
 let lastEmptyJoke = "";
 let watchedStores = [];
 let deferredInstall = null;
+let distanceUnit = readUnit();
 
+syncUnitToggle();
 openOnlyEl.checked = readOpenOnly();
 openOnlyEl.addEventListener("change", () => {
   try {
@@ -99,6 +103,12 @@ openOnlyEl.addEventListener("change", () => {
     /* private mode / blocked storage */
   }
   if (lastResult) render(lastResult, { doCelebrate: false });
+});
+
+unitButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setUnit(btn.dataset.unit);
+  });
 });
 
 form.addEventListener("submit", async (event) => {
@@ -569,7 +579,7 @@ function checkingCard(store, index) {
         <div>
           <h3>${escapeHtml(store.name)}</h3>
           <p class="meta">
-            ${formatKm(store.distanceKm)}
+            ${formatDistance(store.distanceKm)}
             ${store.isOpen ? "· Open" : "· Closed"}
             ${store.hoursLabel ? `· ${escapeHtml(store.hoursLabel)}` : ""}
             <br />${escapeHtml(store.address?.singleLine)}
@@ -608,7 +618,7 @@ function spotlightCard(store, hitCount) {
         <div>
           <h2>${escapeHtml(store.name)}</h2>
           <p class="meta">
-            ${formatKm(store.distanceKm)}
+            ${formatDistance(store.distanceKm)}
             ${store.isOpen ? "· Open" : "· Closed"}
             ${store.hoursLabel ? `· ${escapeHtml(store.hoursLabel)}` : ""}
             <br />${escapeHtml(store.address.singleLine)}
@@ -642,7 +652,7 @@ function storeCard(store, { filled = false, index = 0 } = {}) {
         <div>
           <h3>${escapeHtml(store.name)}</h3>
           <p class="meta">
-            ${formatKm(store.distanceKm)}
+            ${formatDistance(store.distanceKm)}
             ${store.isOpen ? "· Open" : "· Closed"}
             ${store.hoursLabel ? `· ${escapeHtml(store.hoursLabel)}` : ""}
             <br />${escapeHtml(store.address.singleLine)}
@@ -738,11 +748,46 @@ function starbucksUrl(store) {
     : `https://www.starbucks.co.uk/store-locator/${store.storeNumber}`;
 }
 
-function formatKm(km) {
+function formatDistance(km) {
   if (!Number.isFinite(km)) return "";
+  if (distanceUnit === "mi") {
+    const miles = km * 0.621371;
+    if (miles < 0.06) return "Right by you";
+    if (miles < 0.2) return `${Math.round(miles * 5280)} ft`;
+    return `${miles.toFixed(miles < 10 ? 1 : 0)} mi`;
+  }
   if (km < 0.1) return "Right by you";
   if (km < 1) return `${Math.round(km * 1000)} m`;
   return `${km.toFixed(km < 10 ? 1 : 0)} km`;
+}
+
+function readUnit() {
+  try {
+    const saved = localStorage.getItem(UNIT_KEY);
+    if (saved === "mi" || saved === "km") return saved;
+  } catch {
+    /* private mode / blocked storage */
+  }
+  return "km";
+}
+
+function setUnit(unit) {
+  if (unit !== "km" && unit !== "mi") return;
+  if (unit === distanceUnit) return;
+  distanceUnit = unit;
+  try {
+    localStorage.setItem(UNIT_KEY, unit);
+  } catch {
+    /* ignore */
+  }
+  syncUnitToggle();
+  if (lastResult) render(lastResult, { doCelebrate: false });
+}
+
+function syncUnitToggle() {
+  unitButtons.forEach((btn) => {
+    btn.setAttribute("aria-pressed", String(btn.dataset.unit === distanceUnit));
+  });
 }
 
 function formatCheckedAt(iso) {
@@ -756,7 +801,7 @@ function formatCheckedAt(iso) {
 }
 
 function shareLine(store) {
-  const distance = formatKm(store.distanceKm);
+  const distance = formatDistance(store.distanceKm);
   const where = distance ? `${store.name} (${distance})` : store.name;
   if (store.flavourInStock) return `Banana's on at ${where}`;
   if (store.status === "sold_out") return `Banana's sold out at ${where}`;
