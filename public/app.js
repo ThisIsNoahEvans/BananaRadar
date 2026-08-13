@@ -90,6 +90,7 @@ const EMPTY_HEADLINES = [
 
 let lastResult = null;
 let lastEmptyJoke = "";
+let lastSearchQuery = "";
 let watchedStores = [];
 let deferredInstall = null;
 let distanceUnit = readUnit();
@@ -183,6 +184,9 @@ async function runSearch(params, { skipIntro = false, updateUrl = true } = {}) {
   abortController = new AbortController();
   const { signal } = abortController;
   const seq = ++searchSeq;
+
+  if (params.q) lastSearchQuery = String(params.q).trim();
+  else if (params.lat != null || params.lng != null) lastSearchQuery = "";
 
   bananaEl.classList.remove("happy", "sad");
   radarEl.classList.remove("found", "miss");
@@ -465,9 +469,6 @@ function render(data, { doCelebrate = true } = {}) {
       view.label,
       openOnlyEl.checked
     );
-  const shareText = view.hits
-    ? `${view.title} ${cardBody}`
-    : `${(emptyJoke || "It's a sad banana day.").replace(/\.$/, "")}${view.label} — none of the ${view.visible.length || view.stores.length} nearby stores have the banana flavour.`;
   hideStatus();
 
   summaryEl.hidden = false;
@@ -477,7 +478,7 @@ function render(data, { doCelebrate = true } = {}) {
         <h2>${escapeHtml(view.title)}</h2>
         <p>${escapeHtml(cardBody)}</p>
         ${view.checkedAt ? `<p class="checked-at">${escapeHtml(view.checkedAt)}</p>` : ""}
-        <button type="button" class="btn ghost share-btn" data-share="summary" data-share-text="${escapeHtml(shareText)}">
+        <button type="button" class="btn ghost share-btn" data-share="summary">
           Share
         </button>
       </div>
@@ -696,7 +697,7 @@ function spotlightCard(store, hitCount) {
       <div class="spotlight-actions">
         <a class="btn primary" href="${mapsUrl(store)}" target="_blank" rel="noreferrer">Go here</a>
         <a class="btn secondary" href="${starbucksUrl(store)}" target="_blank" rel="noreferrer">Starbucks page</a>
-        <button type="button" class="share-link" data-share="store" data-store-number="${escapeHtml(store.storeNumber)}" data-share-text="${escapeHtml(shareLine(store))}">
+        <button type="button" class="share-link" data-share="store" data-store-number="${escapeHtml(store.storeNumber)}">
           Share
         </button>
         ${watchButton(store)}
@@ -729,7 +730,7 @@ function storeCard(store, { filled = false, index = 0 } = {}) {
       <div class="card-links">
         <a href="${mapsUrl(store)}" target="_blank" rel="noreferrer">Directions</a>
         <a href="${starbucksUrl(store)}" target="_blank" rel="noreferrer">Starbucks page</a>
-        <button type="button" class="share-link" data-share="store" data-store-number="${escapeHtml(store.storeNumber)}" data-share-text="${escapeHtml(shareLine(store))}">
+        <button type="button" class="share-link" data-share="store" data-store-number="${escapeHtml(store.storeNumber)}">
           Share
         </button>
         ${watchButton(store)}
@@ -871,14 +872,55 @@ function shareLine(store) {
   return `Can't tell if banana's on at ${where}`;
 }
 
+function summaryShareText() {
+  if (!lastResult) return "Banana Radar";
+  const view = resultView(lastResult);
+  if (view.hits === 0) {
+    const joke = (lastEmptyJoke || "It's a sad banana day.").replace(/\.$/, "");
+    return `${joke}${view.label} — none of the ${view.visible.length || view.stores.length} nearby stores have the banana flavour.`;
+  }
+  const body = summaryCopy(
+    view.hits,
+    view.visible.length,
+    view.stores.length,
+    view.label,
+    openOnlyEl.checked
+  );
+  return `${view.title} ${body}`;
+}
+
+function withShareLink(text, q) {
+  const link = shareSearchUrl(q);
+  return link ? `${text}\n${link}` : text;
+}
+
+function shareSearchUrl(q) {
+  const query = String(q || "").trim();
+  if (!query) return "";
+  const url = new URL(location.pathname, location.origin);
+  url.searchParams.set("q", query);
+  return url.toString();
+}
+
+function summarySearchQuery() {
+  if (lastSearchQuery) return lastSearchQuery;
+  const origin = lastResult?.origin?.label || "";
+  if (origin && !/^your location$/i.test(origin)) return origin;
+  return storeSearchQuery(lastResult?.stores?.[0]);
+}
+
+function storeSearchQuery(store) {
+  return String(store?.address?.postalCode || "").trim();
+}
+
 function onShareClick(event) {
-  const btn = event.target.closest("[data-share-text]");
+  const btn = event.target.closest("[data-share]");
   if (!btn) return;
   shareOrCopy(btn);
 }
 
 async function shareOrCopy(button) {
-  const text = button.dataset.shareText;
+  const text = shareTextFromButton(button);
   const spec = shareSpecFromButton(button);
   let file = null;
   try {
@@ -915,6 +957,16 @@ async function shareOrCopy(button) {
   } catch {
     flashLabel(button, "Couldn't copy");
   }
+}
+
+function shareTextFromButton(button) {
+  if (button.dataset.share === "store") {
+    const store = lastResult?.stores?.find(
+      (item) => String(item.storeNumber) === String(button.dataset.storeNumber)
+    );
+    if (store) return withShareLink(shareLine(store), storeSearchQuery(store));
+  }
+  return withShareLink(summaryShareText(), summarySearchQuery());
 }
 
 function shareSpecFromButton(button) {
