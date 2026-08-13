@@ -1,0 +1,131 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: devices
+    // Document ID: sha256(push endpoint)
+    // Fields:
+    //   - endpoint: string (required, https URL, max 2048)
+    //   - keys: map (required) - { p256dh: string, auth: string }
+    //   - createdAt: timestamp (required, immutable)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: watches
+    // Document ID: {deviceId}_{storeNumber}
+    // Fields:
+    //   - deviceId: string (required, immutable)
+    //   - storeNumber: string (required, immutable, 1-20)
+    //   - name: string (required, 1-120)
+    //   - market: string (required, "uk" | "us")
+    //   - countryCode: string (required, 2 chars)
+    //   - lastFlavourInStock: bool | null (optional)
+    //   - lastNotifiedAt: timestamp | null (optional)
+    //   - status: string (optional)
+    //   - createdAt: timestamp (required, immutable)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: rateLimits
+    // Document ID: sha256(ip)
+    // Fields:
+    //   - count: number (required)
+    //   - windowStart: timestamp (required)
+    //
+    // ===============================================================
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidUrl(url) {
+      return url is string && url.matches("^https://.*");
+    }
+
+    function isValidDevice() {
+      return hasRequiredFields(['endpoint', 'keys', 'createdAt', 'updatedAt']) &&
+        hasOnlyAllowedFields(['endpoint', 'keys', 'createdAt', 'updatedAt']) &&
+        isValidUrl(request.resource.data.endpoint) &&
+        request.resource.data.endpoint.size() <= 2048 &&
+        request.resource.data.keys is map &&
+        request.resource.data.keys.keys().hasOnly(['p256dh', 'auth']) &&
+        request.resource.data.keys.p256dh is string &&
+        request.resource.data.keys.p256dh.size() > 0 &&
+        request.resource.data.keys.p256dh.size() <= 256 &&
+        request.resource.data.keys.auth is string &&
+        request.resource.data.keys.auth.size() > 0 &&
+        request.resource.data.keys.auth.size() <= 256 &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp;
+    }
+
+    function isValidWatch() {
+      return hasRequiredFields(['deviceId', 'storeNumber', 'name', 'market', 'countryCode', 'createdAt', 'updatedAt']) &&
+        request.resource.data.keys()
+          .hasOnly(['deviceId', 'storeNumber', 'name', 'market', 'countryCode', 'lastFlavourInStock', 'lastNotifiedAt', 'status', 'createdAt', 'updatedAt']) &&
+        validStringLength('deviceId', 16, 128) &&
+        validStringLength('storeNumber', 1, 20) &&
+        validStringLength('name', 1, 120) &&
+        request.resource.data.market in ['uk', 'us'] &&
+        validStringLength('countryCode', 2, 2) &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        (!('lastFlavourInStock' in request.resource.data) ||
+          request.resource.data.lastFlavourInStock == null ||
+          request.resource.data.lastFlavourInStock is bool) &&
+        (!('lastNotifiedAt' in request.resource.data) ||
+          request.resource.data.lastNotifiedAt == null ||
+          request.resource.data.lastNotifiedAt is timestamp) &&
+        (!('status' in request.resource.data) ||
+          request.resource.data.status == null ||
+          (request.resource.data.status is string &&
+            request.resource.data.status.size() <= 32));
+    }
+
+    function isValidRateLimit() {
+      return hasRequiredFields(['count', 'windowStart']) &&
+        hasOnlyAllowedFields(['count', 'windowStart']) &&
+        request.resource.data.count is int &&
+        request.resource.data.count > 0 &&
+        request.resource.data.count <= 1000 &&
+        request.resource.data.windowStart is timestamp;
+    }
+
+    match /devices/{deviceId} {
+      allow read: if false;
+      allow create: if false && isValidDevice();
+      allow update: if false && isValidDevice();
+      allow delete: if false;
+    }
+
+    match /watches/{watchId} {
+      allow read: if false;
+      allow create: if false && isValidWatch();
+      allow update: if false && isValidWatch();
+      allow delete: if false;
+    }
+
+    match /rateLimits/{ipHash} {
+      allow read: if false;
+      allow create: if false && isValidRateLimit();
+      allow update: if false && isValidRateLimit();
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
