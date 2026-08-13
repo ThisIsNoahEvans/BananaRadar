@@ -102,6 +102,7 @@ function render(data) {
 
   const hits = data.summary?.flavourInStock || 0;
   const label = data.origin?.label ? ` near ${data.origin.label}` : "";
+  const checkedAt = formatCheckedAt(data.checkedAt);
   const nearestHit = stores.find((store) => store.flavourInStock);
   const shareText = nearestHit
     ? shareLine(nearestHit)
@@ -114,6 +115,7 @@ function render(data) {
       <div>
         <h2>${headline(hits, stores.length)}</h2>
         <p>${hits} of ${stores.length} nearby stores have the banana flavour on the menu${label}.</p>
+        ${checkedAt ? `<p class="checked-at">${escapeHtml(checkedAt)}</p>` : ""}
         <button type="button" class="btn ghost share-btn" data-share-text="${escapeHtml(shareText)}">
           Share
         </button>
@@ -236,6 +238,16 @@ function formatKm(km) {
   if (km < 0.1) return "Right by you";
   if (km < 1) return `${Math.round(km * 1000)} m`;
   return `${km.toFixed(km < 10 ? 1 : 0)} km`;
+}
+
+function formatCheckedAt(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const time = date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `Checked ${time}`;
 }
 
 function shareLine(store) {

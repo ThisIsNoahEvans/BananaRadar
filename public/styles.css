@@ -244,6 +244,13 @@ h1 em {
   color: rgba(255, 246, 223, 0.78);
 }
 
+.summary-card .checked-at {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255, 246, 223, 0.45);
+}
+
 .summary-card.hit {
   animation: summary-pop 0.55s cubic-bezier(0.34, 1.35, 0.64, 1);
 }
