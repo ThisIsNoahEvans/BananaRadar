@@ -3,6 +3,7 @@ node_modules/
 .DS_Store
 *.log
 .env
+.secret.local
 .firebase/
 firebase-debug.log
 firebase-debug.*.log

@@ -13,6 +13,7 @@
         "public",
         ".env",
         ".env.*",
+        ".secret.local",
         ".firestore-rules-analysis.md"
       ]
     }
