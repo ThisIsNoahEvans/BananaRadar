@@ -176,6 +176,7 @@ function publicWatches(stores) {
     name: store.name,
     market: store.market,
     countryCode: store.countryCode,
+    postalCode: store.postalCode || null,
     lastFlavourInStock: store.lastFlavourInStock ?? null,
   }));
 }

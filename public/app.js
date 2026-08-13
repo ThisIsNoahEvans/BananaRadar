@@ -91,9 +91,12 @@ const EMPTY_HEADLINES = [
 let lastResult = null;
 let lastEmptyJoke = "";
 let lastSearchQuery = "";
+let lastSearchCoords = null;
 let watchedStores = [];
 let deferredInstall = null;
 let distanceUnit = readUnit();
+
+const DEFAULT_TITLE = document.title;
 
 syncUnitToggle();
 openOnlyEl.checked = readOpenOnly();
@@ -137,7 +140,7 @@ locateBtn.addEventListener("click", async () => {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
       },
-      { skipIntro: true, updateUrl: false }
+      { skipIntro: true }
     );
   } catch (err) {
     if (err?.name === "AbortError") return;
@@ -147,19 +150,16 @@ locateBtn.addEventListener("click", async () => {
   }
 });
 
-document.querySelectorAll("[data-place]").forEach((btn) => {
-  btn.addEventListener("click", (event) => {
-    event.preventDefault();
-    placeInput.value = btn.dataset.place;
-    form.requestSubmit();
-  });
-});
-
 window.addEventListener("popstate", () => {
-  const q = queryFromUrl();
-  if (q) {
-    placeInput.value = q;
-    runSearch({ q }, { updateUrl: false });
+  const params = searchFromUrl();
+  if (params?.q) {
+    placeInput.value = params.q;
+    runSearch(params, { updateUrl: false });
+    return;
+  }
+  if (params?.lat != null) {
+    placeInput.value = "";
+    runSearch(params, { updateUrl: false, skipIntro: true });
     return;
   }
   placeInput.value = "";
@@ -173,10 +173,12 @@ spotlightEl.addEventListener("click", onResultsClick);
 resultsEl.addEventListener("click", onResultsClick);
 watchListEl.addEventListener("click", onResultsClick);
 
-const initialQ = queryFromUrl();
-if (initialQ) {
-  placeInput.value = initialQ;
-  runSearch({ q: initialQ }, { updateUrl: false });
+const initialSearch = searchFromUrl();
+if (initialSearch?.q) {
+  placeInput.value = initialSearch.q;
+  runSearch(initialSearch, { updateUrl: false });
+} else if (initialSearch?.lat != null) {
+  runSearch(initialSearch, { updateUrl: false, skipIntro: true });
 }
 
 async function runSearch(params, { skipIntro = false, updateUrl = true } = {}) {
@@ -185,14 +187,22 @@ async function runSearch(params, { skipIntro = false, updateUrl = true } = {}) {
   const { signal } = abortController;
   const seq = ++searchSeq;
 
-  if (params.q) lastSearchQuery = String(params.q).trim();
-  else if (params.lat != null || params.lng != null) lastSearchQuery = "";
+  if (params.q) {
+    lastSearchQuery = String(params.q).trim();
+    lastSearchCoords = null;
+  } else if (params.lat != null || params.lng != null) {
+    lastSearchQuery = "";
+    lastSearchCoords = {
+      lat: Number(params.lat),
+      lng: Number(params.lng),
+    };
+  }
 
   bananaEl.classList.remove("happy", "sad");
   radarEl.classList.remove("found", "miss");
   document.querySelector(".celebrate")?.remove();
   setSearching(true);
-  if (updateUrl) syncSearchUrl(params.q);
+  if (updateUrl) syncSearchUrl(params);
   if (!skipIntro) beginSkeletonState();
 
   try {
@@ -206,6 +216,7 @@ async function runSearch(params, { skipIntro = false, updateUrl = true } = {}) {
     if (err?.name === "AbortError" || seq !== searchSeq) return;
     setSearching(false);
     hideListUi();
+    syncDocumentTitle(null);
     showStatus(searchErrorMessage(err));
   }
 }
@@ -276,7 +287,12 @@ async function readNdjson(response, signal, onEvent) {
       const line = buffer.slice(0, newline).trim();
       buffer = buffer.slice(newline + 1);
       if (!line) continue;
-      const event = JSON.parse(line);
+      let event;
+      try {
+        event = JSON.parse(line);
+      } catch {
+        throw new Error("Couldn't complete that search. Try again in a moment.");
+      }
       if (event.type === "error") {
         throw new Error(event.error || "Couldn't complete that search.");
       }
@@ -287,7 +303,12 @@ async function readNdjson(response, signal, onEvent) {
 
   const leftover = buffer.trim();
   if (leftover) {
-    const event = JSON.parse(leftover);
+    let event;
+    try {
+      event = JSON.parse(leftover);
+    } catch {
+      throw new Error("Couldn't complete that search. Try again in a moment.");
+    }
     if (event.type === "error") {
       throw new Error(event.error || "Couldn't complete that search.");
     }
@@ -449,6 +470,7 @@ function render(data, { doCelebrate = true } = {}) {
   const view = resultView(data);
   if (!view.stores.length) {
     hideListUi();
+    syncDocumentTitle(null);
     showStatus("No Starbucks found nearby. Try a broader place name.");
     return;
   }
@@ -460,22 +482,23 @@ function render(data, { doCelebrate = true } = {}) {
         : lastEmptyJoke || nextEmptyHeadline()
       : "";
   lastEmptyJoke = emptyJoke;
-  const cardBody =
-    emptyJoke ||
-    summaryCopy(
-      view.hits,
-      view.visible.length,
-      view.stores.length,
-      view.label,
-      openOnlyEl.checked
-    );
+  const useJokeTitle = view.hits === 0 && view.title === "No banana nearby.";
+  const cardTitle = useJokeTitle ? emptyJoke || view.title : view.title;
+  const cardBody = summaryCopy(
+    view.hits,
+    view.visible.length,
+    view.stores.length,
+    view.label,
+    openOnlyEl.checked
+  );
   hideStatus();
+  syncDocumentTitle(view);
 
   summaryEl.hidden = false;
   summaryEl.innerHTML = `
     <div class="summary-card${view.hits ? " hit" : ""} is-ready">
       <div>
-        <h2>${escapeHtml(view.title)}</h2>
+        <h2>${escapeHtml(cardTitle)}</h2>
         <p>${escapeHtml(cardBody)}</p>
         ${view.checkedAt ? `<p class="checked-at">${escapeHtml(view.checkedAt)}</p>` : ""}
         <button type="button" class="btn ghost share-btn" data-share="summary">
@@ -533,19 +556,59 @@ function hideListUi() {
 function clearResults() {
   hideStatus();
   hideListUi();
+  syncDocumentTitle(null);
+}
+
+function searchFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const q = params.get("q")?.trim();
+  if (q) return { q };
+  const lat = Number(params.get("lat"));
+  const lng = Number(params.get("lng"));
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+  return null;
 }
 
 function queryFromUrl() {
-  return new URLSearchParams(location.search).get("q")?.trim() || "";
+  return searchFromUrl()?.q || "";
 }
 
-function syncSearchUrl(q) {
-  const next = q
-    ? `${location.pathname}?${new URLSearchParams({ q })}`
-    : location.pathname;
+function syncSearchUrl(params = {}) {
+  const nextParams = new URLSearchParams();
+  const q = String(params.q || "").trim();
+  if (q) {
+    nextParams.set("q", q);
+  } else {
+    const lat = Number(params.lat);
+    const lng = Number(params.lng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      nextParams.set("lat", String(lat));
+      nextParams.set("lng", String(lng));
+    }
+  }
+  const qs = nextParams.toString();
+  const next = qs ? `${location.pathname}?${qs}` : location.pathname;
   const current = `${location.pathname}${location.search}`;
   if (current === next) return;
-  history.pushState(q ? { q } : {}, "", next);
+  history.pushState(qs ? Object.fromEntries(nextParams) : {}, "", next);
+}
+
+function syncDocumentTitle(view) {
+  if (!view?.stores?.length) {
+    document.title = DEFAULT_TITLE;
+    return;
+  }
+  const place =
+    view.origin && !/^your location$/i.test(view.origin) ? view.origin : "";
+  if (view.hits > 0) {
+    document.title = place
+      ? `Banana on near ${place} — Banana Radar`
+      : "Banana spotted nearby — Banana Radar";
+    return;
+  }
+  document.title = place
+    ? `No banana near ${place} — Banana Radar`
+    : "No banana nearby — Banana Radar";
 }
 
 function headline(hits, total, { closedHits = 0, noneVisible = false } = {}) {
@@ -749,6 +812,7 @@ function watchButton(store) {
       data-store-name="${escapeHtml(store.name)}"
       data-store-market="${escapeHtml(store.market)}"
       data-store-country="${escapeHtml(store.address?.countryCode || store.countryCode || "")}"
+      data-store-postal="${escapeHtml(store.address?.postalCode || "")}"
     >
       ${isWatched(store.storeNumber) ? "Watching" : "Notify me"}
     </button>
@@ -790,13 +854,15 @@ function itemChips(store) {
     return `<span class="chip">No banana drinks on this store’s published menu</span>`;
   }
   return items
-    .map(
-      (item) => `
-        <span class="chip">
-          <span class="dot ${item.inStock ? "ok" : ""}"></span>
-          ${escapeHtml(item.name)}
-        </span>`
-    )
+    .map((item) => {
+      const state = item.inStock ? "In stock" : "Sold out";
+      return `
+        <span class="chip" aria-label="${escapeHtml(item.name)}: ${state}">
+          <span class="dot ${item.inStock ? "ok" : ""}" aria-hidden="true"></span>
+          <span class="chip-name">${escapeHtml(item.name)}</span>
+          <span class="chip-state${item.inStock ? " ok" : ""}">${state}</span>
+        </span>`;
+    })
     .join("");
 }
 
@@ -889,28 +955,57 @@ function summaryShareText() {
   return `${view.title} ${body}`;
 }
 
-function withShareLink(text, q) {
-  const link = shareSearchUrl(q);
+function withShareLink(text, target) {
+  const link = shareSearchUrl(target);
   return link ? `${text}\n${link}` : text;
 }
 
-function shareSearchUrl(q) {
-  const query = String(q || "").trim();
-  if (!query) return "";
+function shareSearchUrl(target) {
+  if (!target) return "";
+  const spec = typeof target === "string" ? { q: target } : target;
   const url = new URL(location.pathname, location.origin);
-  url.searchParams.set("q", query);
-  return url.toString();
+  const q = String(spec.q || "").trim();
+  if (q) {
+    url.searchParams.set("q", q);
+    return url.toString();
+  }
+  const lat = Number(spec.lat);
+  const lng = Number(spec.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    url.searchParams.set("lat", String(lat));
+    url.searchParams.set("lng", String(lng));
+    return url.toString();
+  }
+  return "";
 }
 
-function summarySearchQuery() {
-  if (lastSearchQuery) return lastSearchQuery;
-  const origin = lastResult?.origin?.label || "";
-  if (origin && !/^your location$/i.test(origin)) return origin;
-  return storeSearchQuery(lastResult?.stores?.[0]);
+function summaryShareTarget() {
+  if (lastSearchQuery) return { q: lastSearchQuery };
+  const origin = lastResult?.origin;
+  if (origin?.label && !/^your location$/i.test(origin.label)) {
+    return { q: origin.label };
+  }
+  const postcode = storeSearchQuery(lastResult?.stores?.[0]);
+  if (postcode) return { q: postcode };
+  if (
+    lastSearchCoords &&
+    Number.isFinite(lastSearchCoords.lat) &&
+    Number.isFinite(lastSearchCoords.lng)
+  ) {
+    return lastSearchCoords;
+  }
+  if (Number.isFinite(origin?.lat) && Number.isFinite(origin?.lng)) {
+    return { lat: origin.lat, lng: origin.lng };
+  }
+  return null;
 }
 
 function storeSearchQuery(store) {
-  return String(store?.address?.postalCode || "").trim();
+  const postcode = String(store?.address?.postalCode || "").trim();
+  if (postcode) return postcode;
+  const city = String(store?.address?.city || "").trim();
+  if (city) return city;
+  return lastSearchQuery || "";
 }
 
 function onShareClick(event) {
@@ -966,7 +1061,7 @@ function shareTextFromButton(button) {
     );
     if (store) return withShareLink(shareLine(store), storeSearchQuery(store));
   }
-  return withShareLink(summaryShareText(), summarySearchQuery());
+  return withShareLink(summaryShareText(), summaryShareTarget());
 }
 
 function shareSpecFromButton(button) {
@@ -989,7 +1084,7 @@ function summaryShareSpec() {
     view.label,
     openOnlyEl.checked
   );
-  const joke = view.hits === 0 ? lastEmptyJoke : "";
+  const joke = view.hits === 0 && view.title === "No banana nearby." ? lastEmptyJoke : "";
   return {
     mood: view.hits ? "hit" : "miss",
     kicker: view.origin ? `Near ${view.origin}` : "Live menu check",
@@ -1604,6 +1699,7 @@ async function toggleWatch(button) {
     name: button.dataset.storeName,
     market: button.dataset.storeMarket,
     countryCode: button.dataset.storeCountry,
+    postalCode: button.dataset.storePostal || "",
   };
   const watching = isWatched(store.storeNumber);
   button.disabled = true;
@@ -1617,7 +1713,7 @@ async function toggleWatch(button) {
     }
     if (lastResult) render(lastResult, { doCelebrate: false });
   } catch (err) {
-    setWatchStatus(err.message || "Couldn't update that watch.");
+    setWatchStatus(err.message || "Couldn't update that watch.", { error: true });
   } finally {
     button.disabled = false;
   }
@@ -1652,11 +1748,19 @@ async function unwatchStore(storeNumber) {
 function renderWatchList() {
   if (!watchesEl) return;
   const hasWatches = watchedStores.length > 0;
-  watchesEl.hidden = !hasWatches && !watchStatusEl?.textContent;
+  const iosNeedsInstall = isIos() && !isStandalone();
+  watchesEl.hidden =
+    !hasWatches && !watchStatusEl?.textContent && !iosNeedsInstall;
   if (watchHintEl) {
-    watchHintEl.textContent = hasWatches
-      ? "We'll ping this device when banana flavour comes back at these stores."
-      : "Tap Notify me on a store to watch it. No account.";
+    if (iosNeedsInstall) {
+      watchHintEl.textContent = hasWatches
+        ? "We'll ping this device when banana flavour comes back at these stores."
+        : "On iPhone, add Banana Radar to your Home Screen first (Share → Add to Home Screen), then tap Notify me on a store.";
+    } else {
+      watchHintEl.textContent = hasWatches
+        ? "We'll ping this device when banana flavour comes back at these stores."
+        : "Tap Notify me on a store to watch it. No account.";
+    }
   }
   watchListEl.innerHTML = watchedStores
     .map(
@@ -1679,10 +1783,12 @@ function renderWatchList() {
     .join("");
 }
 
-function setWatchStatus(message) {
+function setWatchStatus(message, { error = false } = {}) {
   if (!watchStatusEl) return;
   watchStatusEl.hidden = !message;
   watchStatusEl.textContent = message || "";
+  watchStatusEl.classList.toggle("is-error", Boolean(message) && error);
+  watchStatusEl.classList.toggle("is-ok", Boolean(message) && !error);
   if (message) watchesEl.hidden = false;
 }
 
@@ -1757,7 +1863,11 @@ function urlBase64ToUint8Array(base64String) {
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").then(refreshWatches).catch(() => {});
+} else {
+  renderWatchList();
 }
+
+renderWatchList();
 
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();

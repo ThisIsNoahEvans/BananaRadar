@@ -288,24 +288,15 @@ h1 em {
   animation-duration: 0.85s;
 }
 
-.hint {
-  color: var(--muted);
-  font-size: 0.92rem;
-}
-
-.linkish {
-  border: 0;
-  background: none;
-  color: var(--green-2);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-a.linkish:visited {
-  color: var(--green-2);
+.btn:focus-visible,
+.search input:focus-visible,
+.unit-toggle button:focus-visible,
+.share-link:focus-visible,
+.watch-link:focus-visible,
+.card-links a:focus-visible,
+.check input:focus-visible {
+  outline: 3px solid rgba(0, 117, 74, 0.45);
+  outline-offset: 2px;
 }
 
 .status,
@@ -702,6 +693,19 @@ a.linkish:visited {
   border: 1px solid rgba(30, 57, 50, 0.08);
 }
 
+.chip-state {
+  margin-left: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sold);
+}
+
+.chip-state.ok {
+  color: var(--ok);
+}
+
 .dot {
   width: 8px;
   height: 8px;
@@ -827,6 +831,14 @@ a.linkish:visited {
   margin: 12px 0 0;
   font-weight: 600;
   color: var(--ok);
+}
+
+.alert-status.is-ok {
+  color: var(--ok);
+}
+
+.alert-status.is-error {
+  color: var(--sold);
 }
 
 .watch-list {

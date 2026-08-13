@@ -1,5 +1,11 @@
-const CACHE = "banana-radar-v2";
-const PRECACHE = ["/", "/styles.css", "/app.js", "/manifest.webmanifest"];
+const CACHE = "banana-radar-v3";
+const PRECACHE = [
+  "/",
+  "/styles.css",
+  "/app.js",
+  "/manifest.webmanifest",
+  "/banana.svg",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
