@@ -421,9 +421,8 @@ function render(data, { doCelebrate = true } = {}) {
         <h2>${escapeHtml(headline(hits, visible.length, {
           closedHits,
           noneVisible: visible.length === 0,
-          emptyJoke,
         }))}</h2>
-        <p>${summaryCopy(hits, visible.length, stores.length, label, openOnlyEl.checked)}</p>
+        <p>${escapeHtml(emptyJoke || summaryCopy(hits, visible.length, stores.length, label, openOnlyEl.checked))}</p>
         ${checkedAt ? `<p class="checked-at">${escapeHtml(checkedAt)}</p>` : ""}
         <button type="button" class="btn ghost share-btn" data-share-text="${escapeHtml(shareText)}">
           Share
@@ -495,12 +494,12 @@ function syncSearchUrl(q) {
   history.pushState(q ? { q } : {}, "", next);
 }
 
-function headline(hits, total, { closedHits = 0, noneVisible = false, emptyJoke = "" } = {}) {
+function headline(hits, total, { closedHits = 0, noneVisible = false } = {}) {
   if (noneVisible) return "Everyone's closed.";
   if (hits === 0 && closedHits > 0) {
     return "Banana's on — but those stores are closed.";
   }
-  if (hits === 0) return emptyJoke || nextEmptyHeadline();
+  if (hits === 0) return "No banana nearby.";
   if (total > 0 && hits === total) return "The flavour is everywhere.";
   return "Banana spotted nearby.";
 }
