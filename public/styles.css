@@ -157,6 +157,7 @@ h1 em {
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: transform 0.18s ease, opacity 0.18s ease, filter 0.18s ease;
 }
 
 .btn.primary {
@@ -169,8 +170,43 @@ h1 em {
   color: var(--green);
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+  transform: none;
+}
+
+.search-wrap {
+  position: relative;
+}
+
+.search-progress {
+  height: 3px;
+  margin: 10px 22px 0;
+  border-radius: 99px;
+  background: rgba(30, 57, 50, 0.08);
+  overflow: hidden;
+}
+
+.search-progress span {
+  display: block;
+  height: 100%;
+  width: 38%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green-2), var(--banana));
+  animation: hunt 1.15s ease-in-out infinite;
+}
+
+.radar.is-scanning .ping {
+  animation-duration: 1.05s;
+}
+
+.radar.is-scanning .banana {
+  animation-duration: 0.85s;
 }
 
 .hint {
@@ -195,8 +231,30 @@ h1 em {
 }
 
 .status {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
   text-align: center;
   font-weight: 600;
+}
+
+.status-spinner,
+.badge-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(30, 57, 50, 0.18);
+  border-top-color: var(--green-2);
+  animation: spin 0.7s linear infinite;
+  flex: 0 0 auto;
+}
+
+.badge-spinner {
+  width: 12px;
+  height: 12px;
+  border-color: rgba(122, 91, 18, 0.22);
+  border-top-color: #7a5b12;
 }
 
 .summary-card {
@@ -209,6 +267,11 @@ h1 em {
   justify-content: space-between;
   gap: 16px;
   align-items: center;
+  animation: cardIn 0.45s ease both;
+}
+
+.summary-card.is-ready {
+  animation: summaryPop 0.5s ease;
 }
 
 .summary-card h2 {
@@ -229,6 +292,31 @@ h1 em {
   white-space: nowrap;
 }
 
+.score-muted {
+  opacity: 0.45;
+}
+
+.progress-track {
+  height: 6px;
+  margin-top: 14px;
+  border-radius: 99px;
+  background: rgba(255, 246, 223, 0.16);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--banana), #ffe08a);
+  transition: width 0.45s ease;
+}
+
+.progress-bar.is-indeterminate {
+  width: 38%;
+  animation: hunt 1.2s ease-in-out infinite;
+}
+
 .results {
   display: grid;
   gap: 14px;
@@ -241,6 +329,15 @@ h1 em {
   padding: 18px 18px 14px;
   box-shadow: var(--shadow);
   border: 1px solid rgba(30, 57, 50, 0.06);
+  animation: cardIn 0.48s ease both;
+}
+
+.card.is-filled {
+  animation: cardFill 0.42s ease;
+}
+
+.card.is-checking {
+  border-color: rgba(246, 195, 67, 0.28);
 }
 
 .card-top {
@@ -273,6 +370,7 @@ h1 em {
 .badge.in_stock {
   background: #dcfae6;
   color: var(--ok);
+  animation: badgePop 0.45s ease;
 }
 
 .badge.sold_out {
@@ -281,6 +379,14 @@ h1 em {
 }
 
 .badge.unknown {
+  background: #efe4c4;
+  color: #7a5b12;
+}
+
+.badge.checking {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   background: #efe4c4;
   color: #7a5b12;
 }
@@ -330,6 +436,59 @@ h1 em {
   text-decoration: underline;
 }
 
+.card-wait {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.skel {
+  display: block;
+  background: linear-gradient(
+    100deg,
+    rgba(30, 57, 50, 0.07) 20%,
+    rgba(246, 195, 67, 0.28) 50%,
+    rgba(30, 57, 50, 0.07) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.25s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.skel-title {
+  height: 1.15em;
+  width: 58%;
+  margin-bottom: 10px;
+}
+
+.skel-meta {
+  height: 0.78em;
+  width: 78%;
+  margin-top: 8px;
+}
+
+.skel-meta.short {
+  width: 46%;
+}
+
+.skel-badge {
+  width: 92px;
+  height: 32px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.skel-chip {
+  display: inline-block;
+  height: 32px;
+  width: 108px;
+  border-radius: 999px;
+}
+
+.skel-chip.wide {
+  width: 154px;
+}
+
 footer {
   color: var(--muted);
   font-size: 0.85rem;
@@ -365,6 +524,75 @@ footer {
   }
 }
 
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes cardFill {
+  from {
+    opacity: 0.55;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes summaryPop {
+  from {
+    transform: translateY(6px);
+    filter: saturate(0.85);
+  }
+  to {
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes badgePop {
+  0% {
+    transform: scale(0.86);
+  }
+  58% {
+    transform: scale(1.07);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hunt {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}
+
 @media (max-width: 700px) {
   .search {
     grid-template-columns: 1fr;
@@ -374,5 +602,31 @@ footer {
   .summary-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel {
+    animation: none;
+    background: rgba(30, 57, 50, 0.1);
+  }
+
+  .card,
+  .card.is-filled,
+  .summary-card,
+  .summary-card.is-ready,
+  .badge.in_stock,
+  .ping,
+  .banana,
+  .status-spinner,
+  .badge-spinner,
+  .search-progress span,
+  .progress-bar.is-indeterminate {
+    animation: none;
+  }
+
+  .progress-bar,
+  .btn {
+    transition: none;
   }
 }

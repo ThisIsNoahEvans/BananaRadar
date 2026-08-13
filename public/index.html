@@ -29,7 +29,7 @@
 
     <main>
       <section class="hero">
-        <div class="radar" aria-hidden="true">
+        <div id="radar" class="radar" aria-hidden="true">
           <span class="ping"></span>
           <span class="ping delay"></span>
           <svg class="banana" viewBox="0 0 200 200" role="img" aria-label="Banana">
@@ -55,25 +55,30 @@
           Caramelised Banana flavour.
         </p>
 
-        <form id="search-form" class="search">
-          <label class="sr-only" for="place">Postcode or place</label>
-          <input
-            id="place"
-            name="q"
-            type="search"
-            placeholder="Postcode or neighbourhood"
-            autocomplete="off"
-          />
-          <button type="submit" class="btn secondary">Search</button>
-          <button type="button" id="locate" class="btn primary">
-            Use my location
-          </button>
-        </form>
+        <div class="search-wrap">
+          <form id="search-form" class="search">
+            <label class="sr-only" for="place">Postcode or place</label>
+            <input
+              id="place"
+              name="q"
+              type="search"
+              placeholder="Postcode or neighbourhood"
+              autocomplete="off"
+            />
+            <button type="submit" id="search-btn" class="btn secondary">Search</button>
+            <button type="button" id="locate" class="btn primary">
+              Use my location
+            </button>
+          </form>
+          <div id="search-progress" class="search-progress" hidden>
+            <span></span>
+          </div>
+        </div>
         <p class="hint">Try a UK postcode like <button type="button" class="linkish" data-place="WC2N 6NN">WC2N 6NN</button> or a city.</p>
       </section>
 
-      <section id="status" class="status" hidden></section>
-      <section id="summary" class="summary" hidden></section>
+      <section id="status" class="status" hidden aria-live="polite"></section>
+      <section id="summary" class="summary" hidden aria-live="polite"></section>
       <section id="results" class="results" hidden></section>
     </main>
 
