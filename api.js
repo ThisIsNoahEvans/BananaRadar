@@ -1,37 +1,23 @@
 import express from "express";
 import { searchBanana } from "./lib/starbucks.js";
-import { VAPID_PUBLIC_KEY } from "./lib/config.js";
+import { runWatchChecks } from "./lib/check-watches.js";
+import { VAPID_PUBLIC_KEY, MAX_WATCHES } from "./lib/config.js";
 import {
-  allowSubscribe,
+  addWatch,
+  allowWatchMutation,
   clientIp,
-  parseUnsubscribeToken,
-  unsubscribeById,
-  upsertSubscriber,
-} from "./lib/alerts.js";
+  deviceIdFromEndpoint,
+  listWatchesForDevice,
+  parsePushSubscription,
+  parseStore,
+  removeWatch,
+  upsertDevice,
+} from "./lib/watches.js";
 
-const ADDED = { ok: true, message: "Added." };
-const UNSUBSCRIBE_HTML = `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Banana Radar</title>
-    <style>
-      body { font-family: Outfit, system-ui, sans-serif; background: #fff6df; color: #1e3932; display: grid; min-height: 100vh; place-items: center; margin: 0; }
-      p { font-size: 1.2rem; }
-    </style>
-  </head>
-  <body>
-    <p>You're off the list.</p>
-  </body>
-</html>`;
-
-export function createApiApp({
-  getSigningKey = () => process.env.ALERT_SIGNING_KEY || "",
-} = {}) {
+export function createApiApp() {
   const app = express();
   app.disable("x-powered-by");
-  app.use(express.json({ limit: "16kb" }));
+  app.use(express.json({ limit: "32kb" }));
 
   app.get(["/api/search", "/search"], async (req, res) => {
     try {
@@ -44,7 +30,9 @@ export function createApiApp({
       res.json(result);
     } catch (err) {
       const message = err?.message || "Could not check Starbucks stock.";
-      const status = /share your location|coordinates|postcode|place/i.test(message)
+      const status = /share your location|coordinates|postcode|place/i.test(
+        message
+      )
         ? 400
         : 502;
       res.status(status).json({ error: message });
@@ -56,32 +44,84 @@ export function createApiApp({
     res.json({ publicKey: VAPID_PUBLIC_KEY });
   });
 
-  app.post(["/api/alerts", "/alerts"], async (req, res) => {
+  app.post(["/api/watch", "/watch"], async (req, res) => {
     try {
-      if (await allowSubscribe(clientIp(req))) {
-        await upsertSubscriber({
-          email: req.body?.email,
-          lat: req.body?.lat,
-          lng: req.body?.lng,
-          label: req.body?.label,
-          push: req.body?.push,
-        });
+      if (!(await allowWatchMutation(clientIp(req)))) {
+        return res.status(429).json({ error: "Too many watch changes. Try later." });
       }
+      const subscription = parsePushSubscription(req.body?.subscription);
+      const store = parseStore(req.body?.store);
+      if (!subscription) {
+        return res.status(400).json({ error: "That push subscription looks invalid." });
+      }
+      if (!store) {
+        return res.status(400).json({ error: "Pick a store to watch." });
+      }
+      const deviceId = await upsertDevice(subscription);
+      const result = await addWatch(deviceId, store);
+      const stores = await listWatchesForDevice(deviceId);
+      res.json({
+        ok: true,
+        created: result.created,
+        max: MAX_WATCHES,
+        stores: publicWatches(stores),
+      });
     } catch (err) {
-      console.error("alert subscribe failed", err.message);
+      res.status(err.status || 500).json({
+        error: err.message || "Could not save that watch.",
+      });
     }
-    res.json(ADDED);
   });
 
-  app.get(["/api/unsubscribe", "/unsubscribe"], async (req, res) => {
+  app.delete(["/api/watch", "/watch"], async (req, res) => {
     try {
-      const id = parseUnsubscribeToken(req.query.token, getSigningKey());
-      if (id) await unsubscribeById(id);
+      if (!(await allowWatchMutation(clientIp(req)))) {
+        return res.status(429).json({ error: "Too many watch changes. Try later." });
+      }
+      const subscription = parsePushSubscription(req.body?.subscription);
+      const storeNumber = String(req.body?.storeNumber || "").trim();
+      if (!subscription || !storeNumber) {
+        return res.status(400).json({ error: "Missing store or device." });
+      }
+      const deviceId = deviceIdFromEndpoint(subscription.endpoint);
+      await removeWatch(deviceId, storeNumber);
+      const stores = await listWatchesForDevice(deviceId);
+      res.json({ ok: true, stores: publicWatches(stores) });
     } catch (err) {
-      console.error("unsubscribe failed", err.message);
+      res.status(500).json({ error: err.message || "Could not remove that watch." });
     }
-    res.set("Cache-Control", "no-store");
-    res.status(200).type("html").send(UNSUBSCRIBE_HTML);
+  });
+
+  app.post(["/api/watches", "/watches"], async (req, res) => {
+    try {
+      const subscription = parsePushSubscription(req.body?.subscription);
+      if (!subscription) {
+        return res.status(400).json({ error: "That push subscription looks invalid." });
+      }
+      await upsertDevice(subscription);
+      const stores = await listWatchesForDevice(
+        deviceIdFromEndpoint(subscription.endpoint)
+      );
+      res.json({ ok: true, max: MAX_WATCHES, stores: publicWatches(stores) });
+    } catch (err) {
+      res.status(500).json({ error: err.message || "Could not load watches." });
+    }
+  });
+
+  app.post(["/api/check-watches", "/check-watches"], async (req, res) => {
+    const expected = process.env.CRON_SECRET;
+    const provided = String(req.get("x-cron-secret") || "");
+    if (!expected || provided !== expected) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    try {
+      const result = await runWatchChecks({
+        vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
+      });
+      res.json({ ok: true, ...result });
+    } catch (err) {
+      res.status(500).json({ error: err.message || "Watch check failed." });
+    }
   });
 
   app.get(["/api/health", "/health"], (_req, res) => {
@@ -89,4 +129,14 @@ export function createApiApp({
   });
 
   return app;
+}
+
+function publicWatches(stores) {
+  return stores.map((store) => ({
+    storeNumber: store.storeNumber,
+    name: store.name,
+    market: store.market,
+    countryCode: store.countryCode,
+    lastFlavourInStock: store.lastFlavourInStock ?? null,
+  }));
 }

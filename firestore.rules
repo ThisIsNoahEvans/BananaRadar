@@ -9,7 +9,7 @@ service cloud.firestore {
     // Collection: devices
     // Document ID: sha256(push endpoint)
     // Fields:
-    //   - endpoint: string (required, https URL, max 2048) - Web Push endpoint
+    //   - endpoint: string (required, https URL, max 2048)
     //   - keys: map (required) - { p256dh: string, auth: string }
     //   - createdAt: timestamp (required, immutable)
     //   - updatedAt: timestamp (required)
@@ -34,8 +34,6 @@ service cloud.firestore {
     //   - count: number (required)
     //   - windowStart: timestamp (required)
     //
-    // ===============================================================
-    // Helper Functions
     // ===============================================================
 
     function hasRequiredFields(fields) {
@@ -105,7 +103,6 @@ service cloud.firestore {
         request.resource.data.windowStart is timestamp;
     }
 
-    // Client SDK access is denied. Cloud Functions (Admin SDK) bypass rules.
     match /devices/{deviceId} {
       allow read: if false;
       allow create: if false && isValidDevice();
