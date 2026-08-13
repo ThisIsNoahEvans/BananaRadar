@@ -4,6 +4,11 @@ const placeInput = document.querySelector("#place");
 const statusEl = document.querySelector("#status");
 const summaryEl = document.querySelector("#summary");
 const resultsEl = document.querySelector("#results");
+const radarEl = document.querySelector(".radar");
+const bananaEl = document.querySelector(".banana");
+
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let celebrateTimer = 0;
 
 const STATUS_COPY = {
   in_stock: "Banana's on",
@@ -45,6 +50,9 @@ summaryEl.addEventListener("click", onShareClick);
 resultsEl.addEventListener("click", onShareClick);
 
 async function runSearch(params) {
+  bananaEl.classList.remove("happy");
+  radarEl.classList.remove("found");
+  document.querySelector(".celebrate")?.remove();
   showStatus("Checking live Starbucks menus… this takes a few seconds.");
   summaryEl.hidden = true;
   resultsEl.hidden = true;
@@ -80,7 +88,7 @@ function render(data) {
 
   summaryEl.hidden = false;
   summaryEl.innerHTML = `
-    <div class="summary-card">
+    <div class="summary-card${hits ? " hit" : ""}">
       <div>
         <h2>${headline(hits, stores.length)}</h2>
         <p>${hits} of ${stores.length} nearby stores have the banana flavour on the menu${label}.</p>
@@ -94,6 +102,8 @@ function render(data) {
 
   resultsEl.hidden = false;
   resultsEl.innerHTML = stores.map(storeCard).join("");
+
+  if (hits > 0) celebrate();
 }
 
 function headline(hits, total) {
@@ -219,6 +229,73 @@ function flashLabel(button, label) {
       button.textContent = original;
     }, 1600)
   );
+}
+
+function celebrate() {
+  if (reducedMotion.matches) return;
+
+  bananaEl.classList.remove("happy");
+  radarEl.classList.remove("found");
+  void bananaEl.offsetWidth;
+  bananaEl.classList.add("happy");
+  radarEl.classList.add("found");
+
+  burstBananas();
+
+  window.clearTimeout(celebrateTimer);
+  celebrateTimer = window.setTimeout(() => {
+    bananaEl.classList.remove("happy");
+    radarEl.classList.remove("found");
+  }, 1600);
+}
+
+function burstBananas() {
+  document.querySelector(".celebrate")?.remove();
+
+  const layer = document.createElement("div");
+  layer.className = "celebrate";
+  layer.setAttribute("aria-hidden", "true");
+
+  const origin = bananaEl.getBoundingClientRect();
+  const cx = origin.left + origin.width / 2;
+  const cy = origin.top + origin.height / 2;
+  const bits = [
+    "🍌",
+    "🍌",
+    "🍌",
+    "🍌",
+    "🍌",
+    "🍌",
+    "dot",
+    "dot",
+    "dot",
+    "dot",
+    "chip",
+    "chip",
+    "chip",
+    "chip",
+  ];
+
+  for (const kind of bits) {
+    const piece = document.createElement("span");
+    piece.className = `celebrate-piece ${kind === "🍌" ? "emoji" : `confetti-${kind}`}`;
+    if (kind === "🍌") piece.textContent = kind;
+
+    const angle = (Math.random() * 140 - 70) * (Math.PI / 180);
+    const dist = 90 + Math.random() * 160;
+    piece.style.setProperty("--x", `${cx}px`);
+    piece.style.setProperty("--y", `${cy}px`);
+    piece.style.setProperty("--dx", `${Math.sin(angle) * dist}px`);
+    piece.style.setProperty("--dy", `${70 + Math.random() * 90}px`);
+    piece.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 280}deg`);
+    piece.style.setProperty("--delay", `${Math.random() * 90}ms`);
+    piece.style.setProperty("--dur", `${900 + Math.random() * 500}ms`);
+    piece.style.setProperty("--size", `${18 + Math.random() * 10}px`);
+    layer.appendChild(piece);
+  }
+
+  document.body.appendChild(layer);
+  window.setTimeout(() => layer.remove(), 1700);
 }
 
 function showStatus(message) {
