@@ -102,7 +102,11 @@ openOnlyEl.addEventListener("change", () => {
   } catch {
     /* private mode / blocked storage */
   }
-  if (lastResult) render(lastResult, { doCelebrate: false });
+  if (!lastResult) return;
+  const openOnly = openOnlyEl.checked;
+  const bananaChanged =
+    hasVisibleBanana(lastResult, !openOnly) !== hasVisibleBanana(lastResult, openOnly);
+  render(lastResult, { doCelebrate: bananaChanged });
 });
 
 unitButtons.forEach((btn) => {
@@ -368,6 +372,12 @@ function renderScanningSummary({ origin, label, total, checked, hits, locating }
       <div class="score${locating ? " score-muted" : ""}">${locating ? "–/–" : `${hits}/${total}`}</div>
     </div>
   `;
+}
+
+function hasVisibleBanana(data, openOnly) {
+  const stores = data?.stores || [];
+  const visible = openOnly ? stores.filter((store) => store.isOpen) : stores;
+  return visible.some((store) => store.flavourInStock);
 }
 
 function render(data, { doCelebrate = true } = {}) {
