@@ -7,6 +7,7 @@ const form = document.querySelector("#search-form");
 const searchBtn = document.querySelector("#search-btn");
 const locateBtn = document.querySelector("#locate");
 const placeInput = document.querySelector("#place");
+const clearSearchBtn = document.querySelector("#clear-search");
 const statusEl = document.querySelector("#status");
 const summaryEl = document.querySelector("#summary");
 const toolbarEl = document.querySelector("#toolbar");
@@ -129,6 +130,13 @@ form.addEventListener("submit", async (event) => {
   await runSearch({ q });
 });
 
+placeInput.addEventListener("input", syncClearButton);
+
+clearSearchBtn?.addEventListener("click", () => {
+  clearSearch();
+  placeInput.focus();
+});
+
 locateBtn.addEventListener("click", async () => {
   abortController?.abort();
   setSearching(true);
@@ -166,6 +174,7 @@ window.addEventListener("popstate", () => {
   abortController?.abort();
   setSearching(false);
   clearResults();
+  syncClearButton();
 });
 
 summaryEl.addEventListener("click", onShareClick);
@@ -179,6 +188,8 @@ if (initialSearch?.q) {
   runSearch(initialSearch, { updateUrl: false });
 } else if (initialSearch?.lat != null) {
   runSearch(initialSearch, { updateUrl: false, skipIntro: true });
+} else {
+  syncClearButton();
 }
 
 async function runSearch(params, { skipIntro = false, updateUrl = true } = {}) {
@@ -212,12 +223,14 @@ async function runSearch(params, { skipIntro = false, updateUrl = true } = {}) {
     });
     if (seq !== searchSeq) return;
     render(data);
+    syncClearButton();
   } catch (err) {
     if (err?.name === "AbortError" || seq !== searchSeq) return;
     setSearching(false);
     hideListUi();
     syncDocumentTitle(null);
     showStatus(searchErrorMessage(err));
+    syncClearButton();
   }
 }
 
@@ -559,14 +572,46 @@ function clearResults() {
   syncDocumentTitle(null);
 }
 
+function clearSearch() {
+  abortController?.abort();
+  placeInput.value = "";
+  lastSearchQuery = "";
+  lastSearchCoords = null;
+  lastResult = null;
+  lastEmptyJoke = "";
+  setSearching(false);
+  clearResults();
+  syncSearchUrl({});
+  syncClearButton();
+}
+
+function syncClearButton() {
+  if (!clearSearchBtn) return;
+  clearSearchBtn.hidden = !(
+    placeInput.value.trim() ||
+    lastResult ||
+    searchFromUrl()
+  );
+}
+
 function searchFromUrl() {
   const params = new URLSearchParams(location.search);
   const q = params.get("q")?.trim();
   if (q) return { q };
+  if (!params.has("lat") || !params.has("lng")) return null;
   const lat = Number(params.get("lat"));
   const lng = Number(params.get("lng"));
-  if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
-  return null;
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return null;
+  }
+  return { lat, lng };
 }
 
 function queryFromUrl() {

@@ -81,14 +81,25 @@
         <div class="search-wrap">
           <form id="search-form" class="search">
             <label class="sr-only" for="place">Postcode or place</label>
-            <input
-              id="place"
-              name="q"
-              type="search"
-              placeholder="Postcode or place"
-              autocomplete="off"
-              enterkeyhint="search"
-            />
+            <div class="search-field">
+              <input
+                id="place"
+                name="q"
+                type="search"
+                placeholder="Postcode or place"
+                autocomplete="off"
+                enterkeyhint="search"
+              />
+              <button
+                type="button"
+                id="clear-search"
+                class="search-clear"
+                hidden
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            </div>
             <button type="submit" id="search-btn" class="btn secondary">Search</button>
             <button type="button" id="locate" class="btn primary">
               Use my location
