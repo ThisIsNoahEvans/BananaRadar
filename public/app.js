@@ -202,7 +202,7 @@ async function runSearch(params, { skipIntro = false, updateUrl = true } = {}) {
     if (err?.name === "AbortError" || seq !== searchSeq) return;
     setSearching(false);
     hideListUi();
-    showStatus(err.message || "Something went banana-shaped.");
+    showStatus(searchErrorMessage(err));
   }
 }
 
@@ -222,14 +222,38 @@ async function searchWithProgress(params, signal, onEvent) {
     return fetchJsonSearch(query, signal);
   }
   const data = await res.json().catch(() => ({}));
-  throw new Error(data.error || "Search failed");
+  throw new Error(data.error || "Couldn't complete that search.");
 }
 
 async function fetchJsonSearch(query, signal) {
-  const res = await fetch(`/api/search?${query}`, { signal });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Search failed");
+  let res;
+  try {
+    res = await fetch(`/api/search?${query}`, { signal });
+  } catch (err) {
+    if (err?.name === "AbortError") throw err;
+    throw new Error(
+      "Couldn't reach Banana Radar. Check your connection and try again."
+    );
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || "Couldn't complete that search.");
+  }
   return data;
+}
+
+function searchErrorMessage(err) {
+  const msg = String(err?.message || "");
+  if (/failed to fetch|networkerror|load failed/i.test(msg)) {
+    return "Couldn't reach Banana Radar. Check your connection and try again.";
+  }
+  if (/unexpected token|is not valid json|json\.parse/i.test(msg)) {
+    return "Couldn't complete that search. Try again in a moment.";
+  }
+  if (/^request failed \(\d+\)$/i.test(msg) || msg === "Search failed") {
+    return "Couldn't complete that search. Try a postcode or place name again.";
+  }
+  return msg || "Something went banana-shaped.";
 }
 
 async function readNdjson(response, signal, onEvent) {
@@ -249,7 +273,9 @@ async function readNdjson(response, signal, onEvent) {
       buffer = buffer.slice(newline + 1);
       if (!line) continue;
       const event = JSON.parse(line);
-      if (event.type === "error") throw new Error(event.error || "Search failed");
+      if (event.type === "error") {
+        throw new Error(event.error || "Couldn't complete that search.");
+      }
       onEvent(event);
       if (event.type === "done") result = event;
     }
@@ -258,7 +284,9 @@ async function readNdjson(response, signal, onEvent) {
   const leftover = buffer.trim();
   if (leftover) {
     const event = JSON.parse(leftover);
-    if (event.type === "error") throw new Error(event.error || "Search failed");
+    if (event.type === "error") {
+      throw new Error(event.error || "Couldn't complete that search.");
+    }
     onEvent(event);
     if (event.type === "done") result = event;
   }

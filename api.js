@@ -181,7 +181,9 @@ function publicWatches(stores) {
 }
 
 function statusFor(message) {
-  return /share your location|coordinates|postcode|place/i.test(message)
+  return /share your location|coordinates|postcode|place|town|area name|off the map/i.test(
+    message
+  )
     ? 400
     : 502;
 }
