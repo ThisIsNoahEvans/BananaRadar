@@ -3,6 +3,7 @@ const locateBtn = document.querySelector("#locate");
 const placeInput = document.querySelector("#place");
 const statusEl = document.querySelector("#status");
 const summaryEl = document.querySelector("#summary");
+const spotlightEl = document.querySelector("#spotlight");
 const resultsEl = document.querySelector("#results");
 
 const STATUS_COPY = {
@@ -44,6 +45,7 @@ document.querySelectorAll("[data-place]").forEach((btn) => {
 async function runSearch(params) {
   showStatus("Checking live Starbucks menus… this takes a few seconds.");
   summaryEl.hidden = true;
+  spotlightEl.hidden = true;
   resultsEl.hidden = true;
   locateBtn.disabled = true;
 
@@ -63,12 +65,15 @@ async function runSearch(params) {
 function render(data) {
   const stores = data.stores || [];
   if (!stores.length) {
+    spotlightEl.hidden = true;
+    spotlightEl.innerHTML = "";
     showStatus("No Starbucks found nearby. Try a broader place name.");
     return;
   }
 
   const hits = data.summary?.flavourInStock || 0;
   const label = data.origin?.label ? ` near ${data.origin.label}` : "";
+  const nearestHit = stores.find((store) => store.flavourInStock);
   statusEl.hidden = true;
 
   summaryEl.hidden = false;
@@ -82,8 +87,28 @@ function render(data) {
     </div>
   `;
 
+  if (nearestHit) {
+    spotlightEl.hidden = false;
+    spotlightEl.innerHTML = spotlightCard(nearestHit, hits);
+  } else {
+    spotlightEl.hidden = true;
+    spotlightEl.innerHTML = "";
+  }
+
+  const rest = nearestHit
+    ? stores.filter((store) => store !== nearestHit)
+    : stores;
+
+  if (!rest.length) {
+    resultsEl.hidden = true;
+    resultsEl.innerHTML = "";
+    return;
+  }
+
   resultsEl.hidden = false;
-  resultsEl.innerHTML = stores.map(storeCard).join("");
+  resultsEl.innerHTML =
+    (nearestHit ? `<p class="results-label">Other nearby stores</p>` : "") +
+    rest.map(storeCard).join("");
 }
 
 function headline(hits, total) {
@@ -92,24 +117,46 @@ function headline(hits, total) {
   return "Banana spotted nearby.";
 }
 
+function spotlightCard(store, hitCount) {
+  const others = Math.max(0, hitCount - 1);
+  const also =
+    others > 0
+      ? `<p class="spotlight-also">${
+          others === 1
+            ? "1 more nearby store has it too."
+            : `${others} more nearby stores have it too.`
+        }</p>`
+      : "";
+
+  return `
+    <article class="spotlight-card">
+      <p class="spotlight-kicker">Nearest banana</p>
+      <div class="card-top">
+        <div>
+          <h2>${escapeHtml(store.name)}</h2>
+          <p class="meta">
+            ${formatKm(store.distanceKm)}
+            ${store.isOpen ? "· Open" : "· Closed"}
+            ${store.hoursLabel ? `· ${escapeHtml(store.hoursLabel)}` : ""}
+            <br />${escapeHtml(store.address.singleLine)}
+          </p>
+        </div>
+        <span class="badge in_stock">${STATUS_COPY.in_stock}</span>
+      </div>
+      <div class="items">
+        ${itemChips(store)}
+      </div>
+      ${also}
+      <div class="spotlight-actions">
+        <a class="btn primary" href="${mapsUrl(store)}" target="_blank" rel="noreferrer">Go here</a>
+        <a class="btn secondary" href="${starbucksUrl(store)}" target="_blank" rel="noreferrer">Starbucks page</a>
+      </div>
+    </article>
+  `;
+}
+
 function storeCard(store) {
   const badge = STATUS_COPY[store.status] || STATUS_COPY.unknown;
-  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    `${store.coordinates.latitude},${store.coordinates.longitude}`
-  )}`;
-  const sbux =
-    store.market === "us"
-      ? `https://www.starbucks.com/store-locator/store/${store.id}`
-      : `https://www.starbucks.co.uk/store-locator/${store.storeNumber}`;
-  const items = (store.items || [])
-    .map(
-      (item) => `
-        <span class="chip">
-          <span class="dot ${item.inStock ? "ok" : ""}"></span>
-          ${escapeHtml(item.name)}
-        </span>`
-    )
-    .join("");
 
   return `
     <article class="card">
@@ -126,14 +173,42 @@ function storeCard(store) {
         <span class="badge ${store.status}">${badge}</span>
       </div>
       <div class="items">
-        ${items || `<span class="chip">No live banana items on this store’s published menu</span>`}
+        ${itemChips(store)}
       </div>
       <div class="card-links">
-        <a href="${maps}" target="_blank" rel="noreferrer">Directions</a>
-        <a href="${sbux}" target="_blank" rel="noreferrer">Starbucks page</a>
+        <a href="${mapsUrl(store)}" target="_blank" rel="noreferrer">Directions</a>
+        <a href="${starbucksUrl(store)}" target="_blank" rel="noreferrer">Starbucks page</a>
       </div>
     </article>
   `;
+}
+
+function itemChips(store) {
+  const items = store.items || [];
+  if (!items.length) {
+    return `<span class="chip">No live banana items on this store’s published menu</span>`;
+  }
+  return items
+    .map(
+      (item) => `
+        <span class="chip">
+          <span class="dot ${item.inStock ? "ok" : ""}"></span>
+          ${escapeHtml(item.name)}
+        </span>`
+    )
+    .join("");
+}
+
+function mapsUrl(store) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    `${store.coordinates.latitude},${store.coordinates.longitude}`
+  )}`;
+}
+
+function starbucksUrl(store) {
+  return store.market === "us"
+    ? `https://www.starbucks.com/store-locator/store/${store.id}`
+    : `https://www.starbucks.co.uk/store-locator/${store.storeNumber}`;
 }
 
 function formatKm(km) {
