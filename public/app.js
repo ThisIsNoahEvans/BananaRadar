@@ -1,13 +1,8 @@
-const OPEN_ONLY_KEY = "banana-radar:open-only";
-
 const form = document.querySelector("#search-form");
 const locateBtn = document.querySelector("#locate");
 const placeInput = document.querySelector("#place");
 const statusEl = document.querySelector("#status");
 const summaryEl = document.querySelector("#summary");
-const toolbarEl = document.querySelector("#toolbar");
-const openOnlyEl = document.querySelector("#open-only");
-const filterNoteEl = document.querySelector("#filter-note");
 const resultsEl = document.querySelector("#results");
 
 const STATUS_COPY = {
@@ -15,18 +10,6 @@ const STATUS_COPY = {
   sold_out: "Sold out",
   unknown: "Can't tell",
 };
-
-let lastResult = null;
-
-openOnlyEl.checked = readOpenOnly();
-openOnlyEl.addEventListener("change", () => {
-  try {
-    localStorage.setItem(OPEN_ONLY_KEY, String(openOnlyEl.checked));
-  } catch {
-    /* private mode / blocked storage */
-  }
-  if (lastResult) render(lastResult);
-});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -58,10 +41,12 @@ document.querySelectorAll("[data-place]").forEach((btn) => {
   });
 });
 
+summaryEl.addEventListener("click", onShareClick);
+resultsEl.addEventListener("click", onShareClick);
+
 async function runSearch(params) {
   showStatus("Checking live Starbucks menus… this takes a few seconds.");
   summaryEl.hidden = true;
-  toolbarEl.hidden = true;
   resultsEl.hidden = true;
   locateBtn.disabled = true;
 
@@ -79,90 +64,42 @@ async function runSearch(params) {
 }
 
 function render(data) {
-  lastResult = data;
   const stores = data.stores || [];
   if (!stores.length) {
-    toolbarEl.hidden = true;
     showStatus("No Starbucks found nearby. Try a broader place name.");
     return;
   }
 
-  const ranked = sortInStockFirst(stores);
-  const visible = openOnlyEl.checked
-    ? ranked.filter((store) => store.isOpen)
-    : ranked;
-  const hiddenClosed = stores.length - visible.length;
-  const hits = visible.filter((store) => store.flavourInStock).length;
-  const closedHits = stores.filter(
-    (store) => store.flavourInStock && !store.isOpen
-  ).length;
+  const hits = data.summary?.flavourInStock || 0;
   const label = data.origin?.label ? ` near ${data.origin.label}` : "";
+  const nearestHit = stores.find((store) => store.flavourInStock);
+  const shareText = nearestHit
+    ? shareLine(nearestHit)
+    : `It's a sad banana day${label} — none of the ${stores.length} nearby stores have the banana flavour.`;
   statusEl.hidden = true;
 
   summaryEl.hidden = false;
   summaryEl.innerHTML = `
     <div class="summary-card">
       <div>
-        <h2>${headline(hits, visible.length, {
-          closedHits,
-          noneVisible: visible.length === 0,
-        })}</h2>
-        <p>${summaryCopy(hits, visible.length, stores.length, label, openOnlyEl.checked)}</p>
+        <h2>${headline(hits, stores.length)}</h2>
+        <p>${hits} of ${stores.length} nearby stores have the banana flavour on the menu${label}.</p>
+        <button type="button" class="btn ghost share-btn" data-share-text="${escapeHtml(shareText)}">
+          Share
+        </button>
       </div>
-      <div class="score">${visible.length ? `${hits}/${visible.length}` : "0"}</div>
+      <div class="score">${hits}/${stores.length}</div>
     </div>
   `;
 
-  toolbarEl.hidden = false;
-  filterNoteEl.textContent =
-    openOnlyEl.checked && hiddenClosed
-      ? `${hiddenClosed} closed ${hiddenClosed === 1 ? "store" : "stores"} hidden`
-      : "";
-
   resultsEl.hidden = false;
-  resultsEl.innerHTML = visible.length
-    ? visible.map(storeCard).join("")
-    : `<p class="empty">All nearby stores are closed. Turn off Open only to see them.</p>`;
+  resultsEl.innerHTML = stores.map(storeCard).join("");
 }
 
-function headline(hits, total, { closedHits = 0, noneVisible = false } = {}) {
-  if (noneVisible) return "Everyone's closed.";
-  if (hits === 0 && closedHits > 0) {
-    return "Banana's on — but those stores are closed.";
-  }
+function headline(hits, total) {
   if (hits === 0) return "It's a sad banana day.";
-  if (total > 0 && hits === total) return "The flavour is everywhere.";
+  if (hits === total) return "The flavour is everywhere.";
   return "Banana spotted nearby.";
-}
-
-function summaryCopy(hits, visibleCount, total, label, openOnly) {
-  if (openOnly && visibleCount === 0) {
-    return `None of the ${total} nearby stores are open${label}.`;
-  }
-  if (openOnly) {
-    return `${hits} of ${visibleCount} open stores have the banana flavour on the menu${label}.`;
-  }
-  return `${hits} of ${total} nearby stores have the banana flavour on the menu${label}.`;
-}
-
-function sortInStockFirst(stores) {
-  return [...stores].sort((a, b) => {
-    if (Boolean(a.flavourInStock) !== Boolean(b.flavourInStock)) {
-      return a.flavourInStock ? -1 : 1;
-    }
-    return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
-  });
-}
-
-function readOpenOnly() {
-  try {
-    const saved = localStorage.getItem(OPEN_ONLY_KEY);
-    if (saved === "false") return false;
-    if (saved === "true") return true;
-  } catch {
-    /* ignore */
-  }
-  return true;
 }
 
 function storeCard(store) {
@@ -204,6 +141,9 @@ function storeCard(store) {
       <div class="card-links">
         <a href="${maps}" target="_blank" rel="noreferrer">Directions</a>
         <a href="${sbux}" target="_blank" rel="noreferrer">Starbucks page</a>
+        <button type="button" class="share-link" data-share-text="${escapeHtml(shareLine(store))}">
+          Share
+        </button>
       </div>
     </article>
   `;
@@ -214,6 +154,71 @@ function formatKm(km) {
   if (km < 0.1) return "Right by you";
   if (km < 1) return `${Math.round(km * 1000)} m`;
   return `${km.toFixed(km < 10 ? 1 : 0)} km`;
+}
+
+function shareLine(store) {
+  const distance = formatKm(store.distanceKm);
+  const where = distance ? `${store.name} (${distance})` : store.name;
+  if (store.flavourInStock) return `Banana's on at ${where}`;
+  if (store.status === "sold_out") return `Banana's sold out at ${where}`;
+  return `Can't tell if banana's on at ${where}`;
+}
+
+function onShareClick(event) {
+  const btn = event.target.closest("[data-share-text]");
+  if (!btn) return;
+  shareOrCopy(btn.dataset.shareText, btn);
+}
+
+async function shareOrCopy(text, button) {
+  const payload = { title: "Banana Radar", text };
+  try {
+    if (typeof navigator.share === "function") {
+      if (!navigator.canShare || navigator.canShare(payload)) {
+        await navigator.share(payload);
+        return;
+      }
+    }
+  } catch (err) {
+    if (err?.name === "AbortError") return;
+  }
+
+  try {
+    await copyText(text);
+    flashLabel(button, "Copied!");
+  } catch {
+    flashLabel(button, "Couldn't copy");
+  }
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const input = document.createElement("textarea");
+  input.value = text;
+  input.setAttribute("readonly", "");
+  input.style.position = "fixed";
+  input.style.left = "-9999px";
+  document.body.appendChild(input);
+  input.select();
+  const ok = document.execCommand("copy");
+  input.remove();
+  if (!ok) throw new Error("copy failed");
+}
+
+function flashLabel(button, label) {
+  const original = button.dataset.shareLabel || button.textContent.trim();
+  button.dataset.shareLabel = original;
+  button.textContent = label;
+  window.clearTimeout(Number(button.dataset.shareTimer));
+  button.dataset.shareTimer = String(
+    window.setTimeout(() => {
+      button.textContent = original;
+    }, 1600)
+  );
 }
 
 function showStatus(message) {
